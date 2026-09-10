@@ -93,7 +93,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.4 · Trapecio de retención corregido")
+st.caption("Versión 5.5 · Orientación correcta de retención")
 
 # =========================================================
 # LIGAMENTO
@@ -300,13 +300,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     ax.set_ylim(-1.05, top_y + 1.15)
 
     # Mantener numeración inferior del eje X
-    ax.set_xticks(
-        [i + 0.5 for i in range(visible_slots)]
-    )
-    ax.set_xticklabels(
-        [str(i+1) for i in range(visible_slots)],
-        fontsize=7
-    )
+    ax.set_xticks([])
     ax.set_yticks([])
 
     ax.set_title(
@@ -926,7 +920,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.4",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.5",
         fmt_title
     )
 
@@ -1038,6 +1032,6 @@ st.download_button(
 )
 
 st.info(
-    "V5.3: corregido el error al exportar PNG de agujas. "
-    "La tabla de agujas permanece unificada y no se separa por Cilindro/Plato."
+    "V5.5: Retención usa trapecio hacia arriba en Monofontura y Cilindro, "
+    "y hacia abajo en Plato/Dial. También se retiró la numeración del eje X del ligamento."
 )
