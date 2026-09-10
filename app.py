@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import zipfile
-from matplotlib.patches import Circle
+from matplotlib.patches import Circle, Polygon
 from io import BytesIO
 from xlsxwriter import Workbook
 
@@ -93,7 +93,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.3 · Corrección exportación de agujas")
+st.caption("Versión 5.4 · Trapecio de retención corregido")
 
 # =========================================================
 # LIGAMENTO
@@ -377,17 +377,17 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
     if fontura_name == "Plato":
         symbol_map = {
             "Malla": "▼",
-            "Retención": "⏥",
+            "Retención": "TRAP",
             "Anulado": "—"
         }
-        caption = "▼ = Malla   ⏥ = Retención   — = Anulado / Sin tejido"
+        caption = "▼ = Malla   TRAP = Retención   — = Anulado / Sin tejido"
     else:
         symbol_map = {
             "Malla": "▲",
-            "Retención": "⏢",
+            "Retención": "TRAP",
             "Anulado": "—"
         }
-        caption = "▲ = Malla   ⏢ = Retención   — = Anulado / Sin tejido"
+        caption = "▲ = Malla   TRAP = Retención   — = Anulado / Sin tejido"
 
     df_symbols = df_edit.copy()
     for col in df_symbols.columns:
@@ -635,6 +635,66 @@ with right:
 
     st.dataframe(resumen, use_container_width=True, hide_index=True)
 
+
+def leva_dataframe_to_png(df, title, orientation="up"):
+    from matplotlib.patches import Polygon
+
+    rows, cols = df.shape
+    fig_w = max(7.5, cols * 1.15 + 2.2)
+    fig_h = max(3.0, rows * 0.55 + 1.8)
+
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
+    ax.set_facecolor("white")
+    ax.set_xlim(0, cols + 1)
+    ax.set_ylim(0, rows + 1)
+    ax.axis("off")
+    ax.set_title(title, fontsize=13, fontweight="bold", color="#17365D", pad=14)
+
+    # grid
+    for c in range(cols + 2):
+        ax.plot([c, c], [0, rows + 1], color="#808080", lw=0.7)
+    for r in range(rows + 2):
+        ax.plot([0, cols + 1], [r, r], color="#808080", lw=0.7)
+
+    # headers
+    for j, col in enumerate(df.columns, start=1):
+        ax.text(j + 0.5, rows + 0.5, str(col), ha="center", va="center",
+                fontsize=8, fontweight="bold")
+    for i, idx in enumerate(df.index):
+        y = rows - i - 0.5
+        ax.text(0.5, y, str(idx), ha="center", va="center",
+                fontsize=8, fontweight="bold")
+
+        for j, val in enumerate(df.iloc[i], start=1):
+            x = j + 0.5
+            sval = str(val).strip()
+
+            if sval in ("▲", "▼"):
+                if orientation == "down" or sval == "▼":
+                    pts = [(x-0.16, y+0.12), (x+0.16, y+0.12), (x, y-0.16)]
+                else:
+                    pts = [(x-0.16, y-0.12), (x+0.16, y-0.12), (x, y+0.16)]
+                ax.add_patch(Polygon(pts, closed=True, facecolor="black", edgecolor="black"))
+
+            elif sval in ("TRAP", "⏢", "⏥"):
+                if orientation == "down":
+                    pts = [(x-0.18, y+0.14), (x+0.18, y+0.14),
+                           (x+0.11, y-0.14), (x-0.11, y-0.14)]
+                else:
+                    pts = [(x-0.11, y-0.14), (x+0.11, y-0.14),
+                           (x+0.18, y+0.14), (x-0.18, y+0.14)]
+                ax.add_patch(Polygon(pts, closed=True, fill=False,
+                                     edgecolor="black", linewidth=1.7))
+
+            elif sval in ("—", "-", "–"):
+                ax.plot([x-0.18, x+0.18], [y, y], color="black", lw=1.8)
+
+            elif sval:
+                ax.text(x, y, sval, ha="center", va="center", fontsize=8)
+
+    fig.tight_layout()
+    return fig
+
 def dataframe_to_png(df, title, font_size=8):
     # Render de tabla a PNG usando matplotlib
     rows, cols = df.shape
@@ -705,31 +765,52 @@ def generar_zip_png():
             facecolor="white"
         )
 
-        for ax, df, title in [
-            (axes[0], df_leva_cil_symbols, "LEVAS - CILINDRO"),
-            (axes[1], df_leva_plato_symbols, "LEVAS - PLATO / DIAL"),
+        for ax, df, title, orient in [
+            (axes[0], df_leva_cil_symbols, "LEVAS - CILINDRO", "up"),
+            (axes[1], df_leva_plato_symbols, "LEVAS - PLATO / DIAL", "down"),
         ]:
             ax.axis("off")
             ax.set_title(title, fontsize=12, fontweight="bold", color="#17365D", pad=10)
-            table = ax.table(
-                cellText=df.values,
-                rowLabels=df.index,
-                colLabels=df.columns,
-                cellLoc="center",
-                rowLoc="center",
-                loc="center"
-            )
-            table.auto_set_font_size(False)
-            table.set_fontsize(8)
-            table.scale(1.0, 1.35)
-            for (r, c), cell in table.get_celld().items():
-                cell.set_edgecolor("#808080")
-                cell.set_linewidth(0.6)
-                if r == 0 or c == -1:
-                    cell.set_text_props(weight="bold")
-                    cell.set_facecolor("#F2F2F2")
-                else:
-                    cell.set_facecolor("white")
+
+            rows, cols = df.shape
+            ax.set_xlim(0, cols + 1)
+            ax.set_ylim(0, rows + 1)
+
+            for c in range(cols + 2):
+                ax.plot([c, c], [0, rows + 1], color="#808080", lw=0.7)
+            for r in range(rows + 2):
+                ax.plot([0, cols + 1], [r, r], color="#808080", lw=0.7)
+
+            for j, col in enumerate(df.columns, start=1):
+                ax.text(j+0.5, rows+0.5, str(col), ha="center", va="center",
+                        fontsize=8, fontweight="bold")
+            for i, idx in enumerate(df.index):
+                y = rows-i-0.5
+                ax.text(0.5, y, str(idx), ha="center", va="center",
+                        fontsize=8, fontweight="bold")
+                for j, val in enumerate(df.iloc[i], start=1):
+                    x = j+0.5
+                    sval = str(val).strip()
+
+                    if sval in ("▲","▼"):
+                        if orient == "down":
+                            pts = [(x-0.16,y+0.12),(x+0.16,y+0.12),(x,y-0.16)]
+                        else:
+                            pts = [(x-0.16,y-0.12),(x+0.16,y-0.12),(x,y+0.16)]
+                        ax.add_patch(Polygon(pts, closed=True, facecolor="black", edgecolor="black"))
+
+                    elif sval in ("TRAP","⏢","⏥"):
+                        if orient == "down":
+                            pts = [(x-0.18,y+0.14),(x+0.18,y+0.14),
+                                   (x+0.11,y-0.14),(x-0.11,y-0.14)]
+                        else:
+                            pts = [(x-0.11,y-0.14),(x+0.11,y-0.14),
+                                   (x+0.18,y+0.14),(x-0.18,y+0.14)]
+                        ax.add_patch(Polygon(pts, closed=True, fill=False,
+                                             edgecolor="black", linewidth=1.7))
+
+                    elif sval in ("—","-","–"):
+                        ax.plot([x-0.18,x+0.18],[y,y],color="black",lw=1.8)
 
         fig.tight_layout()
         fig.savefig(
@@ -741,7 +822,7 @@ def generar_zip_png():
         )
         plt.close(fig)
     else:
-        fig = dataframe_to_png(df_leva_symbols, "DISPOSICIÓN DE LEVAS")
+        fig = leva_dataframe_to_png(df_leva_symbols, "DISPOSICIÓN DE LEVAS", orientation="up")
         fig.savefig(
             leva_buffer,
             format="png",
@@ -845,7 +926,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.3",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.4",
         fmt_title
     )
 
