@@ -93,7 +93,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.5 · Orientación correcta de retención")
+st.caption("Versión 5.6 · Orientación de trapecios corregida")
 
 # =========================================================
 # LIGAMENTO
@@ -672,11 +672,13 @@ def leva_dataframe_to_png(df, title, orientation="up"):
 
             elif sval in ("TRAP", "⏢", "⏥"):
                 if orientation == "down":
+                    # Trapecio hacia abajo: ancho arriba, angosto abajo
                     pts = [(x-0.18, y+0.14), (x+0.18, y+0.14),
                            (x+0.11, y-0.14), (x-0.11, y-0.14)]
                 else:
-                    pts = [(x-0.11, y-0.14), (x+0.11, y-0.14),
-                           (x+0.18, y+0.14), (x-0.18, y+0.14)]
+                    # Trapecio hacia arriba: angosto arriba, ancho abajo
+                    pts = [(x-0.11, y+0.14), (x+0.11, y+0.14),
+                           (x+0.18, y-0.14), (x-0.18, y-0.14)]
                 ax.add_patch(Polygon(pts, closed=True, fill=False,
                                      edgecolor="black", linewidth=1.7))
 
@@ -795,11 +797,13 @@ def generar_zip_png():
 
                     elif sval in ("TRAP","⏢","⏥"):
                         if orient == "down":
+                            # Plato/Dial: trapecio hacia abajo
                             pts = [(x-0.18,y+0.14),(x+0.18,y+0.14),
                                    (x+0.11,y-0.14),(x-0.11,y-0.14)]
                         else:
-                            pts = [(x-0.11,y-0.14),(x+0.11,y-0.14),
-                                   (x+0.18,y+0.14),(x-0.18,y+0.14)]
+                            # Cilindro: trapecio hacia arriba
+                            pts = [(x-0.11,y+0.14),(x+0.11,y+0.14),
+                                   (x+0.18,y-0.14),(x-0.18,y-0.14)]
                         ax.add_patch(Polygon(pts, closed=True, fill=False,
                                              edgecolor="black", linewidth=1.7))
 
@@ -920,7 +924,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.5",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.6",
         fmt_title
     )
 
@@ -1032,6 +1036,6 @@ st.download_button(
 )
 
 st.info(
-    "V5.5: Retención usa trapecio hacia arriba en Monofontura y Cilindro, "
-    "y hacia abajo en Plato/Dial. También se retiró la numeración del eje X del ligamento."
+    "V5.6: Retención corregida: Monofontura y Cilindro = trapecio hacia arriba; "
+    "Plato/Dial = trapecio hacia abajo."
 )
