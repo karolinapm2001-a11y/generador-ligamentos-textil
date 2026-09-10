@@ -93,7 +93,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.6 · Orientación de trapecios corregida")
+st.caption("Versión 5.7 · Dial primero en tabla de agujas")
 
 # =========================================================
 # LIGAMENTO
@@ -611,8 +611,8 @@ with right:
         ]
 
         needle_exports = [
-            ("AGUJAS", df_needle_cil_symbols),
-            ("AGUJAS / DIAL", df_needle_plato_symbols)
+            ("AGUJAS / DIAL", df_needle_plato_symbols),
+            ("AGUJAS", df_needle_cil_symbols)
         ]
 
     # =====================================================
@@ -924,7 +924,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.6",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.7",
         fmt_title
     )
 
