@@ -93,7 +93,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.8 · Orden de agujas según ficha 23046-1")
+st.caption("Versión 5.9 · Plato/Dial descendente · Cilindro ascendente")
 
 # =========================================================
 # LIGAMENTO
@@ -342,16 +342,8 @@ def ensure_needle_state(n_agujas, visible_slots, fontura_name="Mono"):
     return key
 
 def _orden_visual_agujas(n_agujas, fontura_name):
-    """
-    Orden visual según la hoja de tejeduría:
-    - Plato/Dial: N→1 (descendente).
-    - Cilindro: 1→N (ascendente).
-    - Monofontura: 1→N.
-    """
-    if fontura_name == "Plato":
-        numeros = range(n_agujas, 0, -1)
-    else:
-        numeros = range(1, n_agujas + 1)
+    """Orden visual: Plato/Dial N→1; Cilindro y Mono 1→N."""
+    numeros = range(n_agujas, 0, -1) if fontura_name == "Plato" else range(1, n_agujas + 1)
     return [f"Aguja {a}" for a in numeros]
 
 
@@ -466,27 +458,49 @@ with left:
         placeholder="Ej. 22239"
     )
 
-    n_agujas = st.number_input(
-        "N° de agujas",
-        min_value=1,
-        max_value=64,
-        value=8,
-        step=1
-    )
-
     tipo_fontura = st.selectbox(
         "Tipo de fontura",
         ["Monofontura", "Doblefontura"],
         index=0
     )
 
+    if tipo_fontura == "Monofontura":
+        n_agujas = st.number_input(
+            "N° de agujas",
+            min_value=1,
+            max_value=64,
+            value=8,
+            step=1
+        )
+    else:
+        st.markdown("**Cantidad de agujas por fontura**")
+        col_cil_datos, col_plato_datos = st.columns(2)
+        with col_cil_datos:
+            n_agujas_cil = st.number_input(
+                "N° agujas Cilindro",
+                min_value=1,
+                max_value=64,
+                value=4,
+                step=1,
+                key="n_agujas_cilindro"
+            )
+        with col_plato_datos:
+            n_agujas_plato = st.number_input(
+                "N° agujas Plato / Dial",
+                min_value=1,
+                max_value=64,
+                value=2,
+                step=1,
+                key="n_agujas_plato"
+            )
 
     visible_slots = st.number_input(
-        "Cantidad visible de repeticiones/posiciones",
+        "Cantidad visible de repeticiones del ligamento",
         min_value=1,
         max_value=40,
         value=15,
-        step=1
+        step=1,
+        help="Este valor solo controla cuántas repeticiones se muestran en el dibujo del ligamento. No modifica levas ni selección de agujas."
     )
 
     st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
@@ -578,7 +592,8 @@ with right:
 
         st.markdown(
             '<div class="note">'
-            'La selección de agujas se genera como Agujas × Repeticiones.'
+            'La selección de agujas es independiente de las repeticiones visibles del ligamento. '
+            'En monofontura se muestran tantas posiciones como agujas.'
             '</div>',
             unsafe_allow_html=True
         )
@@ -586,7 +601,7 @@ with right:
         df_needle_edit, df_needle_symbols = make_needle_editor(
             "Agujas – Monofontura",
             n_agujas,
-            visible_slots,
+            int(n_agujas),
             "Mono"
         )
 
@@ -595,34 +610,16 @@ with right:
         needle_exports = [("AGUJAS – MONOFONTURA", df_needle_symbols)]
 
     else:
-        st.markdown("**Cantidad de agujas por fontura**")
-        col_plato, col_cil = st.columns(2)
-        with col_plato:
-            n_agujas_plato = st.number_input(
-                "N° agujas Plato / Dial",
-                min_value=1,
-                max_value=64,
-                value=int(n_agujas),
-                step=1,
-                key="n_agujas_plato"
-            )
-        with col_cil:
-            n_agujas_cil = st.number_input(
-                "N° agujas Cilindro",
-                min_value=1,
-                max_value=64,
-                value=int(n_agujas),
-                step=1,
-                key="n_agujas_cilindro"
-            )
-
         st.markdown(
-            '<div class="note">Puedes usar distinta cantidad de agujas en cada fontura. '
-            'En levas, selecciona <b>Vacío</b> cuando necesites dejar el cuadro sin símbolo.</div>',
+            '<div class="note">'
+            'En doblefontura, Cilindro y Plato/Dial usan cantidades independientes de agujas. '
+            'Las columnas de levas dependen del N° de sistemas. La selección de agujas usa tantas posiciones '
+            'como agujas tenga cada fontura. La cantidad visible de repeticiones solo afecta el ligamento. '
+            'En levas, selecciona <b>Vacío</b> cuando necesites dejar el cuadro sin símbolo.'
+            '</div>',
             unsafe_allow_html=True
         )
 
-        # En la hoja de tejeduría se presenta primero Plato/Dial y luego Cilindro.
         tab_plato, tab_cil = st.tabs(["Plato / Dial", "Cilindro"])
 
         with tab_plato:
@@ -636,7 +633,7 @@ with right:
             df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
                 "Agujas / Dial",
                 int(n_agujas_plato),
-                visible_slots,
+                int(n_agujas_plato),
                 "Plato"
             )
 
@@ -651,7 +648,7 @@ with right:
             df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
                 "Agujas / Cilindro",
                 int(n_agujas_cil),
-                visible_slots,
+                int(n_agujas_cil),
                 "Cilindro"
             )
 
@@ -777,53 +774,7 @@ def dataframe_to_png(df, title, font_size=8):
     fig.tight_layout()
     return fig
 
-def dataframes_to_png_separados(sections, font_size=8):
-    """Renderiza varias tablas en un solo PNG, pero como bloques independientes."""
-    if not sections:
-        return dataframe_to_png(pd.DataFrame(), "SELECCIÓN DE AGUJAS", font_size=font_size)
-
-    total_rows = sum(max(1, len(df)) for _, df in sections)
-    max_cols = max((len(df.columns) for _, df in sections), default=1)
-    fig_w = max(7.5, max_cols * 1.15 + 2.2)
-    fig_h = max(4.0, total_rows * 0.55 + len(sections) * 1.8)
-
-    fig, axes = plt.subplots(len(sections), 1, figsize=(fig_w, fig_h), facecolor="white")
-    if len(sections) == 1:
-        axes = [axes]
-
-    for ax, (title, df) in zip(axes, sections):
-        ax.axis("off")
-        ax.set_title(title, fontsize=12, fontweight="bold", color="#17365D", pad=10)
-
-        # Evita que valores faltantes aparezcan como 'nan'.
-        df_show = df.fillna("").astype(object)
-        table = ax.table(
-            cellText=df_show.values,
-            rowLabels=df_show.index,
-            colLabels=df_show.columns,
-            cellLoc="center",
-            rowLoc="center",
-            loc="center"
-        )
-        table.auto_set_font_size(False)
-        table.set_fontsize(font_size)
-        table.scale(1.0, 1.45)
-
-        for (r, c), cell in table.get_celld().items():
-            cell.set_edgecolor("#808080")
-            cell.set_linewidth(0.6)
-            if r == 0 or c == -1:
-                cell.set_text_props(weight="bold")
-                cell.set_facecolor("#F2F2F2")
-            else:
-                cell.set_facecolor("white")
-
-    fig.tight_layout(h_pad=2.0)
-    return fig
-
 def generar_zip_png():
-    from matplotlib.patches import Polygon
-
     zip_buffer = BytesIO()
 
     # 1. Ligamento
@@ -849,7 +800,7 @@ def generar_zip_png():
     leva_buffer = BytesIO()
 
     if tipo_fontura == "Doblefontura":
-        # Un PNG con Plato/Dial arriba y Cilindro abajo
+        # Un PNG con Plato/Dial y Cilindro apilados
         fig_h = 4.0 + 0.5 * (len(df_leva_cil_symbols) + len(df_leva_plato_symbols))
         fig, axes = plt.subplots(
             2, 1,
@@ -928,20 +879,47 @@ def generar_zip_png():
 
     leva_buffer.seek(0)
 
-    # 3. Agujas - usar la tabla de exportación ya construida
-    # (evita depender de una variable que solo existe en algunas ramas)
+    # 3. Agujas
     aguja_buffer = BytesIO()
 
-    if not needle_exports:
-        fig_ag = dataframe_to_png(pd.DataFrame(), "SELECCIÓN DE AGUJAS")
-    elif len(needle_exports) == 1:
+    if tipo_fontura == "Doblefontura":
+        # Dos tablas separadas en una sola imagen: Plato/Dial arriba y Cilindro abajo.
+        tablas_ag = [
+            ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
+            ("AGUJAS / CILINDRO", df_needle_cil_symbols),
+        ]
+        fig_h = 4.0 + 0.48 * (len(df_needle_plato_symbols) + len(df_needle_cil_symbols))
+        fig_w = max(8.5, max(df_needle_plato_symbols.shape[1], df_needle_cil_symbols.shape[1]) * 1.15 + 2.5)
+        fig_ag, axes = plt.subplots(2, 1, figsize=(fig_w, fig_h), facecolor="white")
+
+        for ax, (titulo_ag, df_ag) in zip(axes, tablas_ag):
+            ax.axis("off")
+            ax.set_title(titulo_ag, fontsize=12, fontweight="bold", color="#17365D", pad=10)
+            table = ax.table(
+                cellText=df_ag.fillna("").values,
+                rowLabels=df_ag.index,
+                colLabels=df_ag.columns,
+                cellLoc="center",
+                rowLoc="center",
+                loc="center"
+            )
+            table.auto_set_font_size(False)
+            table.set_fontsize(8)
+            table.scale(1.0, 1.35)
+            for (r, c), cell in table.get_celld().items():
+                cell.set_edgecolor("#808080")
+                cell.set_linewidth(0.6)
+                if r == 0 or c == -1:
+                    cell.set_text_props(weight="bold")
+                    cell.set_facecolor("#F2F2F2")
+                else:
+                    cell.set_facecolor("white")
+
+        fig_ag.tight_layout()
+    else:
         titulo_ag, df_ag_export = needle_exports[0]
         fig_ag = dataframe_to_png(df_ag_export.fillna(""), titulo_ag)
-    else:
-        # Doble fontura: mantener Plato/Dial y Cilindro como tablas separadas.
-        # Esto también evita los 'nan' que aparecían al concatenar matrices
-        # con diferente cantidad de repeticiones/columnas.
-        fig_ag = dataframes_to_png_separados(needle_exports)
+
     fig_ag.savefig(
         aguja_buffer,
         format="png",
@@ -1012,7 +990,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.7",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.9",
         fmt_title
     )
 
@@ -1022,18 +1000,22 @@ def generar_excel():
     ws.write("A4","N° sistemas",fmt_h)
     ws.write("B4",n_sistemas,fmt_c)
 
-    ws.write("A5","N° agujas",fmt_h)
-    ws.write("B5",n_agujas,fmt_c)
-    ws.write("A6","Tipo de fontura",fmt_h)
-    ws.write("B6",tipo_fontura,fmt_c)
+    ws.write("A5","Tipo de fontura",fmt_h)
+    ws.write("B5",tipo_fontura,fmt_c)
     if tipo_fontura == "Doblefontura":
-        ws.write("A7","N° agujas Cilindro",fmt_h)
-        ws.write("B7",int(n_agujas_cil),fmt_c)
-        ws.write("A8","N° agujas Plato / Dial",fmt_h)
-        ws.write("B8",int(n_agujas_plato),fmt_c)
+        ws.write("A6","N° agujas Cilindro",fmt_h)
+        ws.write("B6",int(n_agujas_cil),fmt_c)
+        ws.write("A7","N° agujas Plato / Dial",fmt_h)
+        ws.write("B7",int(n_agujas_plato),fmt_c)
+        ws.write("A8","Repeticiones visibles ligamento",fmt_h)
+        ws.write("B8",int(visible_slots),fmt_c)
         sec_start = 9
     else:
-        sec_start = 7
+        ws.write("A6","N° agujas",fmt_h)
+        ws.write("B6",int(n_agujas),fmt_c)
+        ws.write("A7","Repeticiones visibles ligamento",fmt_h)
+        ws.write("B7",int(visible_slots),fmt_c)
+        sec_start = 8
 
     # Secuencias
     ws.write(sec_start-1,0,"Sistema",fmt_h)
@@ -1119,7 +1101,7 @@ st.divider()
 st.download_button(
     "⬇️ EXPORTAR RESULTADO A EXCEL",
     data=generar_excel(),
-    file_name="resultado_ligamento_v5_3.xlsx",
+    file_name="resultado_ligamento_v5_9.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
@@ -1132,6 +1114,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.6: Retención corregida: Monofontura y Cilindro = trapecio hacia arriba; "
-    "Plato/Dial = trapecio hacia abajo."
+    "V5.9: Plato/Dial = agujas en orden descendente y levas hacia abajo; "
+    "Cilindro = agujas en orden ascendente y levas hacia arriba. "
+    "La imagen de agujas muestra ambas tablas por separado."
 )
