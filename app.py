@@ -223,59 +223,70 @@ def draw_catalog():
 
 def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns=None,
                           tipo_fontura="Monofontura"):
+    """Dibuja el ligamento en formato compacto tipo ficha de tejeduría.
+
+    El área del ligamento queda más cerrada, con sistemas próximos entre sí y
+    módulos más angostos, manteniendo los comentarios y el hilo/material a la derecha.
+    """
     n = len(system_sequences)
     labels = labels or [""] * n
     yarns = yarns or [""] * n
 
-    row_gap = 1.15
-    fig_h = max(4.4, n*0.90 + 1.4)
-    fig_w = max(14.8, visible_slots*0.75 + 8.2)
+    # Formato compacto, similar a la ficha de referencia.
+    module_w = 0.72
+    symbol_h = 0.50
+    row_gap = 0.88
+
+    lig_width = visible_slots * module_w
+    x_text1 = lig_width + 0.72
+    x_text2 = lig_width + 2.55
+
+    # El dibujo conserva espacio para descripción/material, pero evita el efecto
+    # excesivamente ancho de la versión anterior.
+    fig_w = max(10.2, lig_width + 4.25)
+    fig_h = max(3.2, n * 0.70 + 0.85)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.set_facecolor("white")
 
-    lig_width = visible_slots * 1.0
-    x_text1 = lig_width + 1.05
-    x_text2 = lig_width + 3.10
-
     for i, seq in enumerate(system_sequences):
         y = (n - 1 - i) * row_gap
 
-        # Número de sistema al lado izquierdo del ligamento
+        # Número de sistema pegado al lado izquierdo, como en la ficha.
         ax.text(
-            -0.55,
+            -0.34,
             y,
             str(i + 1),
             ha="center",
             va="center",
-            fontsize=11,
+            fontsize=9,
             fontweight="bold",
             color="#111111"
         )
 
-        # Repetición continua del ligamento
+        # Repetición continua del ligamento, con módulos más angostos.
         for pos in range(visible_slots):
             sym = seq[pos % len(seq)]
             draw_ligament_symbol(
                 ax,
                 sym,
-                x0=pos*1.0,
+                x0=pos * module_w,
                 y0=y,
-                width=1.0,
-                height=0.62,
-                lw=1.85
+                width=module_w,
+                height=symbol_h,
+                lw=1.45
             )
 
-
-        # Texto a la derecha
+        # Comentario / descripción a la derecha. Se respetan saltos de línea.
         ax.text(
             x_text1,
             y,
             str(labels[i]) if i < len(labels) else "",
-            ha="center",
+            ha="left",
             va="center",
-            fontsize=9.5,
+            fontsize=8.0,
             fontweight="bold",
+            linespacing=1.05,
             color="#111111"
         )
 
@@ -285,59 +296,53 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(yarns[i]) if i < len(yarns) else "",
             ha="center",
             va="center",
-            fontsize=9.2,
+            fontsize=7.8,
             color="#111111"
         )
 
-        # Separador entre sistemas
+        # Separador suave y corto entre sistemas.
         ax.plot(
-            [-0.10, lig_width+4.25],
-            [y - 0.58, y - 0.58],
-            color="#E6E6E6",
-            lw=0.7
+            [-0.05, lig_width + 3.45],
+            [y - row_gap * 0.50, y - row_gap * 0.50],
+            color="#E9E9E9",
+            lw=0.55
         )
 
     top_y = (n - 1) * row_gap
 
+    # Encabezados discretos, sin título grande para conservar el aspecto de ficha.
     ax.text(
         x_text1,
-        top_y + 0.72,
+        top_y + 0.50,
         "TIPO / DESCRIPCIÓN",
-        ha="center",
+        ha="left",
         va="bottom",
-        fontsize=9,
+        fontsize=7.8,
         fontweight="bold",
         color="#17365D"
     )
 
     ax.text(
         x_text2,
-        top_y + 0.72,
+        top_y + 0.50,
         "HILO / MATERIAL",
         ha="center",
         va="bottom",
-        fontsize=9,
+        fontsize=7.8,
         fontweight="bold",
         color="#17365D"
     )
 
-    ax.set_xlim(-0.95, lig_width + 4.35)
-    ax.set_ylim(-1.05, top_y + 1.15)
-
-    # Mantener numeración inferior del eje X
+    ax.set_xlim(-0.62, lig_width + 3.55)
+    ax.set_ylim(-0.58, top_y + 0.83)
     ax.set_xticks([])
     ax.set_yticks([])
 
-    ax.set_title(
-        "LIGAMENTO GENERADO – SECUENCIA CONTINUA POR SISTEMA",
-        fontweight="bold",
-        color="#17365D"
-    )
-
+    # Sin título superior grande: el resultado queda compacto como la primera imagen.
     for sp in ax.spines.values():
         sp.set_visible(False)
 
-    fig.tight_layout()
+    fig.tight_layout(pad=0.35)
     return fig
 
 # =========================================================
