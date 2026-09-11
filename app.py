@@ -1059,7 +1059,7 @@ def generar_excel():
                 ws.write(
                     r+i+1,
                     j+1,
-                    df_export.iloc[i,j],
+                    ("▱" if str(df_export.iloc[i,j]).strip() == "TRAP" else df_export.iloc[i,j]),
                     fmt_c
                 )
 
@@ -1101,7 +1101,7 @@ st.divider()
 st.download_button(
     "⬇️ EXPORTAR RESULTADO A EXCEL",
     data=generar_excel(),
-    file_name="resultado_ligamento_v5_9.xlsx",
+    file_name=f"{str(numero_ficha).strip() or 'ficha'}-ligamento.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
