@@ -349,7 +349,7 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
     leva_columns = {
         f"Sistema {s}": st.column_config.SelectboxColumn(
             f"Sistema {s}",
-            options=["Malla", "Retención", "Anulado"],
+            options=["Malla", "Retención", "Anulado", "Vacío"],
             required=True
         )
         for s in range(1,n_sistemas+1)
@@ -372,16 +372,18 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
         symbol_map = {
             "Malla": "▼",
             "Retención": "TRAP",
-            "Anulado": "—"
+            "Anulado": "—",
+            "Vacío": ""
         }
-        caption = "▼ = Malla   TRAP = Retención   — = Anulado / Sin tejido"
+        caption = "▼ = Malla   TRAP = Retención   — = Anulado / Sin tejido   (Vacío = cuadro sin símbolo)"
     else:
         symbol_map = {
             "Malla": "▲",
             "Retención": "TRAP",
-            "Anulado": "—"
+            "Anulado": "—",
+            "Vacío": ""
         }
-        caption = "▲ = Malla   TRAP = Retención   — = Anulado / Sin tejido"
+        caption = "▲ = Malla   TRAP = Retención   — = Anulado / Sin tejido   (Vacío = cuadro sin símbolo)"
 
     df_symbols = df_edit.copy()
     for col in df_symbols.columns:
@@ -573,19 +575,46 @@ with right:
         needle_exports = [("AGUJAS – MONOFONTURA", df_needle_symbols)]
 
     else:
+        st.markdown("**Cantidad de agujas por fontura**")
+        col_cil, col_plato = st.columns(2)
+        with col_cil:
+            n_agujas_cil = st.number_input(
+                "N° agujas Cilindro",
+                min_value=1,
+                max_value=64,
+                value=int(n_agujas),
+                step=1,
+                key="n_agujas_cilindro"
+            )
+        with col_plato:
+            n_agujas_plato = st.number_input(
+                "N° agujas Plato / Dial",
+                min_value=1,
+                max_value=64,
+                value=int(n_agujas),
+                step=1,
+                key="n_agujas_plato"
+            )
+
+        st.markdown(
+            '<div class="note">Puedes usar distinta cantidad de agujas en cada fontura. '
+            'En levas, selecciona <b>Vacío</b> cuando necesites dejar el cuadro sin símbolo.</div>',
+            unsafe_allow_html=True
+        )
+
         tab_cil, tab_plato = st.tabs(["Cilindro", "Plato / Dial"])
 
         with tab_cil:
             df_leva_cil_edit, df_leva_cil_symbols = make_leva_editor(
                 "Levas – Cilindro",
-                n_agujas,
+                int(n_agujas_cil),
                 n_sistemas,
                 "Cilindro"
             )
 
             df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
                 "Agujas",
-                n_agujas,
+                int(n_agujas_cil),
                 visible_slots,
                 "Cilindro"
             )
@@ -593,14 +622,14 @@ with right:
         with tab_plato:
             df_leva_plato_edit, df_leva_plato_symbols = make_leva_editor(
                 "Levas – Plato / Dial",
-                n_agujas,
+                int(n_agujas_plato),
                 n_sistemas,
                 "Plato"
             )
 
             df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
                 "Agujas / Dial",
-                n_agujas,
+                int(n_agujas_plato),
                 visible_slots,
                 "Plato"
             )
@@ -938,20 +967,28 @@ def generar_excel():
     ws.write("B5",n_agujas,fmt_c)
     ws.write("A6","Tipo de fontura",fmt_h)
     ws.write("B6",tipo_fontura,fmt_c)
+    if tipo_fontura == "Doblefontura":
+        ws.write("A7","N° agujas Cilindro",fmt_h)
+        ws.write("B7",int(n_agujas_cil),fmt_c)
+        ws.write("A8","N° agujas Plato / Dial",fmt_h)
+        ws.write("B8",int(n_agujas_plato),fmt_c)
+        sec_start = 9
+    else:
+        sec_start = 7
 
     # Secuencias
-    ws.write("A7","Sistema",fmt_h)
-    ws.write("B7","Secuencia",fmt_h)
-    ws.write("C7","Tipo / descripción",fmt_h)
-    ws.write("D7","Hilo / material",fmt_h)
+    ws.write(sec_start-1,0,"Sistema",fmt_h)
+    ws.write(sec_start-1,1,"Secuencia",fmt_h)
+    ws.write(sec_start-1,2,"Tipo / descripción",fmt_h)
+    ws.write(sec_start-1,3,"Hilo / material",fmt_h)
 
     for i,seq in enumerate(system_sequences):
-        ws.write(8+i,0,i+1,fmt_c)
-        ws.write(8+i,1,"-".join(map(str,seq)),fmt_c)
-        ws.write(8+i,2,system_labels[i],fmt_c)
-        ws.write(8+i,3,system_yarns[i],fmt_c)
+        ws.write(sec_start+i,0,i+1,fmt_c)
+        ws.write(sec_start+i,1,"-".join(map(str,seq)),fmt_c)
+        ws.write(sec_start+i,2,system_labels[i],fmt_c)
+        ws.write(sec_start+i,3,system_yarns[i],fmt_c)
 
-    img_row = 10+n_sistemas
+    img_row = sec_start + n_sistemas + 1
 
     ws.merge_range(img_row,0,img_row,9,"LIGAMENTO GENERADO",fmt_title)
     ws.insert_image(
