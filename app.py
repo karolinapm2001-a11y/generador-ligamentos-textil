@@ -458,27 +458,49 @@ with left:
         placeholder="Ej. 22239"
     )
 
-    n_agujas = st.number_input(
-        "N° de agujas",
-        min_value=1,
-        max_value=64,
-        value=8,
-        step=1
-    )
-
     tipo_fontura = st.selectbox(
         "Tipo de fontura",
         ["Monofontura", "Doblefontura"],
         index=0
     )
 
+    if tipo_fontura == "Monofontura":
+        n_agujas = st.number_input(
+            "N° de agujas",
+            min_value=1,
+            max_value=64,
+            value=8,
+            step=1
+        )
+    else:
+        st.markdown("**Cantidad de agujas por fontura**")
+        col_cil_datos, col_plato_datos = st.columns(2)
+        with col_cil_datos:
+            n_agujas_cil = st.number_input(
+                "N° agujas Cilindro",
+                min_value=1,
+                max_value=64,
+                value=2,
+                step=1,
+                key="n_agujas_cilindro"
+            )
+        with col_plato_datos:
+            n_agujas_plato = st.number_input(
+                "N° agujas Plato / Dial",
+                min_value=1,
+                max_value=64,
+                value=4,
+                step=1,
+                key="n_agujas_plato"
+            )
 
     visible_slots = st.number_input(
-        "Cantidad visible de repeticiones/posiciones",
+        "Cantidad visible de repeticiones del ligamento",
         min_value=1,
         max_value=40,
         value=15,
-        step=1
+        step=1,
+        help="Este valor solo controla cuántas repeticiones se muestran en el dibujo del ligamento. No modifica levas ni selección de agujas."
     )
 
     st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
@@ -570,7 +592,8 @@ with right:
 
         st.markdown(
             '<div class="note">'
-            'La selección de agujas se genera como Agujas × Repeticiones.'
+            'La selección de agujas es independiente de las repeticiones visibles del ligamento. '
+            'En monofontura se muestran tantas posiciones como agujas.'
             '</div>',
             unsafe_allow_html=True
         )
@@ -578,7 +601,7 @@ with right:
         df_needle_edit, df_needle_symbols = make_needle_editor(
             "Agujas – Monofontura",
             n_agujas,
-            visible_slots,
+            int(n_agujas),
             "Mono"
         )
 
@@ -587,30 +610,13 @@ with right:
         needle_exports = [("AGUJAS – MONOFONTURA", df_needle_symbols)]
 
     else:
-        st.markdown("**Cantidad de agujas por fontura**")
-        col_cil, col_plato = st.columns(2)
-        with col_cil:
-            n_agujas_cil = st.number_input(
-                "N° agujas Cilindro",
-                min_value=1,
-                max_value=64,
-                value=int(n_agujas),
-                step=1,
-                key="n_agujas_cilindro"
-            )
-        with col_plato:
-            n_agujas_plato = st.number_input(
-                "N° agujas Plato / Dial",
-                min_value=1,
-                max_value=64,
-                value=int(n_agujas),
-                step=1,
-                key="n_agujas_plato"
-            )
-
         st.markdown(
-            '<div class="note">Puedes usar distinta cantidad de agujas en cada fontura. '
-            'En levas, selecciona <b>Vacío</b> cuando necesites dejar el cuadro sin símbolo.</div>',
+            '<div class="note">'
+            'En doblefontura, Cilindro y Plato/Dial usan cantidades independientes de agujas. '
+            'Las columnas de levas dependen del N° de sistemas. La selección de agujas usa tantas posiciones '
+            'como agujas tenga cada fontura. La cantidad visible de repeticiones solo afecta el ligamento. '
+            'En levas, selecciona <b>Vacío</b> cuando necesites dejar el cuadro sin símbolo.'
+            '</div>',
             unsafe_allow_html=True
         )
 
@@ -627,7 +633,7 @@ with right:
             df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
                 "Agujas",
                 int(n_agujas_cil),
-                visible_slots,
+                int(n_agujas_cil),
                 "Cilindro"
             )
 
@@ -642,7 +648,7 @@ with right:
             df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
                 "Agujas / Dial",
                 int(n_agujas_plato),
-                visible_slots,
+                int(n_agujas_plato),
                 "Plato"
             )
 
@@ -965,7 +971,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.7",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.8",
         fmt_title
     )
 
@@ -975,18 +981,22 @@ def generar_excel():
     ws.write("A4","N° sistemas",fmt_h)
     ws.write("B4",n_sistemas,fmt_c)
 
-    ws.write("A5","N° agujas",fmt_h)
-    ws.write("B5",n_agujas,fmt_c)
-    ws.write("A6","Tipo de fontura",fmt_h)
-    ws.write("B6",tipo_fontura,fmt_c)
+    ws.write("A5","Tipo de fontura",fmt_h)
+    ws.write("B5",tipo_fontura,fmt_c)
     if tipo_fontura == "Doblefontura":
-        ws.write("A7","N° agujas Cilindro",fmt_h)
-        ws.write("B7",int(n_agujas_cil),fmt_c)
-        ws.write("A8","N° agujas Plato / Dial",fmt_h)
-        ws.write("B8",int(n_agujas_plato),fmt_c)
+        ws.write("A6","N° agujas Cilindro",fmt_h)
+        ws.write("B6",int(n_agujas_cil),fmt_c)
+        ws.write("A7","N° agujas Plato / Dial",fmt_h)
+        ws.write("B7",int(n_agujas_plato),fmt_c)
+        ws.write("A8","Repeticiones visibles ligamento",fmt_h)
+        ws.write("B8",int(visible_slots),fmt_c)
         sec_start = 9
     else:
-        sec_start = 7
+        ws.write("A6","N° agujas",fmt_h)
+        ws.write("B6",int(n_agujas),fmt_c)
+        ws.write("A7","Repeticiones visibles ligamento",fmt_h)
+        ws.write("B7",int(visible_slots),fmt_c)
+        sec_start = 8
 
     # Secuencias
     ws.write(sec_start-1,0,"Sistema",fmt_h)
