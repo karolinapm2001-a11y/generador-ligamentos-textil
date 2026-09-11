@@ -563,11 +563,12 @@ with left:
         )
         system_sequences.append(parse_sequence(txt))
 
-        label = st.text_input(
+        label = st.text_area(
             "Tipo / descripción",
             value="",
             key=f"label_sistema_{s}",
-            placeholder="Ej. JERSEY / VANIZADO / FLOTE"
+            placeholder="Ej. Rizo: 30/1 COTTON\nVanizado: 75/72 PES",
+            height=80
         )
         system_labels.append(label)
 
@@ -1029,6 +1030,13 @@ def generar_excel():
         "border":1
     })
 
+    fmt_c_wrap = wb.add_format({
+        "align":"center",
+        "valign":"vcenter",
+        "text_wrap":True,
+        "border":1
+    })
+
     # Ligamento como imagen
     img_lig = BytesIO()
     fig = draw_system_ligaments(
@@ -1090,8 +1098,12 @@ def generar_excel():
     for i,seq in enumerate(system_sequences):
         ws.write(sec_start+i,0,i+1,fmt_c)
         ws.write(sec_start+i,1,"-".join(map(str,seq)),fmt_c)
-        ws.write(sec_start+i,2,system_labels[i],fmt_c)
+        ws.write(sec_start+i,2,system_labels[i],fmt_c_wrap)
         ws.write(sec_start+i,3,system_yarns[i],fmt_c)
+        # Aumentar la altura cuando la descripción tiene varias líneas.
+        lineas_desc = max(1, str(system_labels[i]).count("\n") + 1)
+        if lineas_desc > 1:
+            ws.set_row(sec_start+i, 15 * lineas_desc)
 
     img_row = sec_start + n_sistemas + 1
 
