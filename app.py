@@ -107,7 +107,7 @@ def parse_sequence(txt):
             continue
         try:
             v = int(p)
-            if 1 <= v <= 6:
+            if 1 <= v <= 7:
                 vals.append(v)
         except:
             pass
@@ -185,12 +185,22 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
             )
         )
 
+    elif sym == 7:
+        # Línea horizontal con flecha hacia la derecha.
+        # Se mantiene dentro de un módulo para que pueda repetirse en el ligamento.
+        ax.annotate(
+            "",
+            xy=(x1, y0),
+            xytext=(x0, y0),
+            arrowprops=dict(arrowstyle="->", color="black", lw=lw, shrinkA=0, shrinkB=0)
+        )
+
 def draw_catalog():
-    fig, ax = plt.subplots(figsize=(5.2, 4.5), facecolor="white")
+    fig, ax = plt.subplots(figsize=(5.2, 5.1), facecolor="white")
     ax.set_facecolor("white")
 
-    for i, sym in enumerate([1,2,3,4,5,6]):
-        y = 5-i
+    for i, sym in enumerate([1,2,3,4,5,6,7]):
+        y = 6-i
         ax.text(
             0.15, y, str(sym),
             fontsize=13, fontweight="bold",
@@ -206,7 +216,7 @@ def draw_catalog():
         )
 
     ax.set_xlim(0,2.35)
-    ax.set_ylim(-0.6,5.8)
+    ax.set_ylim(-0.6,6.8)
     ax.axis("off")
     fig.tight_layout()
     return fig
