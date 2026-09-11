@@ -503,6 +503,15 @@ with left:
         help="Este valor solo controla cuántas repeticiones se muestran en el dibujo del ligamento. No modifica levas ni selección de agujas."
     )
 
+    needle_repetitions = st.number_input(
+        "N° de agujas por rapport",
+        min_value=1,
+        max_value=40,
+        value=12,
+        step=1,
+        help="Controla únicamente las columnas Rep. de la tabla de selección de agujas. Es independiente del N° de agujas y de las repeticiones visibles del ligamento."
+    )
+
     st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
 
     st.markdown(
@@ -593,7 +602,7 @@ with right:
         st.markdown(
             '<div class="note">'
             'La selección de agujas es independiente de las repeticiones visibles del ligamento. '
-            'En monofontura se muestran tantas posiciones como agujas.'
+            'La cantidad de columnas Rep. se define de forma independiente con “N° de agujas por rapport”.'
             '</div>',
             unsafe_allow_html=True
         )
@@ -601,7 +610,7 @@ with right:
         df_needle_edit, df_needle_symbols = make_needle_editor(
             "Agujas – Monofontura",
             n_agujas,
-            int(n_agujas),
+            int(needle_repetitions),
             "Mono"
         )
 
@@ -633,7 +642,7 @@ with right:
             df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
                 "Agujas / Dial",
                 int(n_agujas_plato),
-                int(n_agujas_plato),
+                int(needle_repetitions),
                 "Plato"
             )
 
@@ -648,7 +657,7 @@ with right:
             df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
                 "Agujas / Cilindro",
                 int(n_agujas_cil),
-                int(n_agujas_cil),
+                int(needle_repetitions),
                 "Cilindro"
             )
 
@@ -1016,7 +1025,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.11",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.12",
         fmt_title
     )
 
@@ -1035,13 +1044,17 @@ def generar_excel():
         ws.write("B7",int(n_agujas_plato),fmt_c)
         ws.write("A8","Repeticiones visibles ligamento",fmt_h)
         ws.write("B8",int(visible_slots),fmt_c)
-        sec_start = 9
+        ws.write("A9","Repeticiones selección agujas",fmt_h)
+        ws.write("B9",int(needle_repetitions),fmt_c)
+        sec_start = 10
     else:
         ws.write("A6","N° agujas",fmt_h)
         ws.write("B6",int(n_agujas),fmt_c)
         ws.write("A7","Repeticiones visibles ligamento",fmt_h)
         ws.write("B7",int(visible_slots),fmt_c)
-        sec_start = 8
+        ws.write("A8","Repeticiones selección agujas",fmt_h)
+        ws.write("B8",int(needle_repetitions),fmt_c)
+        sec_start = 9
 
     # Secuencias
     ws.write(sec_start-1,0,"Sistema",fmt_h)
@@ -1169,7 +1182,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.9: Plato/Dial = agujas en orden descendente y levas hacia abajo; "
-    "Cilindro = agujas en orden ascendente y levas hacia arriba. "
-    "La imagen de agujas muestra ambas tablas por separado."
+    "V5.12: selección de agujas con repeticiones independientes del N° de agujas y del ligamento. "
+    "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
+    "tablas separadas y exportación Excel con trapecios gráficos."
 )
