@@ -940,6 +940,32 @@ def generar_zip_png():
     zip_buffer.seek(0)
     return zip_buffer.getvalue()
 
+
+
+def _trapecio_excel_png(orientation="up"):
+    """Crea un pequeño PNG transparente del trapecio para insertarlo dentro de una celda Excel."""
+    fig, ax = plt.subplots(figsize=(1.0, 0.45), dpi=120)
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    if orientation == "down":
+        # Plato/Dial: ancho arriba, angosto abajo.
+        pts = [(0.18, 0.78), (0.82, 0.78), (0.68, 0.22), (0.32, 0.22)]
+    else:
+        # Monofontura/Cilindro: angosto arriba, ancho abajo.
+        pts = [(0.32, 0.78), (0.68, 0.78), (0.82, 0.22), (0.18, 0.22)]
+
+    ax.add_patch(Polygon(pts, closed=True, fill=False, edgecolor="black", linewidth=2.2))
+
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=120, transparent=True, bbox_inches="tight", pad_inches=0.02)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
 # =========================================================
 # EXPORTAR EXCEL
 # =========================================================
@@ -990,7 +1016,7 @@ def generar_excel():
 
     ws.merge_range(
         "A1:J2",
-        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.9",
+        "GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – V5.11",
         fmt_title
     )
 
@@ -1053,15 +1079,44 @@ def generar_excel():
         for j,col in enumerate(df_export.columns,1):
             ws.write(r,j,col,fmt_h)
 
+        # Orientación visual de esta fontura en el Excel.
+        orient_excel = "down" if "PLATO" in str(title).upper() or "DIAL" in str(title).upper() else "up"
+
+        # El trapecio no se escribe como texto: se inserta como imagen dentro de la celda.
+        # Así se ve igual que en las imágenes PNG del generador.
+        trap_img = _trapecio_excel_png(orient_excel)
+
         for i in range(len(df_export)):
-            ws.write(r+i+1,0,df_export.index[i],fmt_h)
+            fila_xls = r+i+1
+            ws.set_row(fila_xls, 24)
+            ws.write(fila_xls,0,df_export.index[i],fmt_h)
+
             for j in range(len(df_export.columns)):
-                ws.write(
-                    r+i+1,
-                    j+1,
-                    ("▱" if str(df_export.iloc[i,j]).strip() == "TRAP" else df_export.iloc[i,j]),
-                    fmt_c
-                )
+                col_xls = j+1
+                sval = str(df_export.iloc[i,j]).strip()
+
+                if sval == "TRAP":
+                    # Celda vacía + trapecio gráfico centrado.
+                    ws.write_blank(fila_xls, col_xls, None, fmt_c)
+                    trap_img.seek(0)
+                    ws.insert_image(
+                        fila_xls,
+                        col_xls,
+                        "trapecio.png",
+                        {
+                            "image_data": trap_img,
+                            "x_offset": 26,
+                            "y_offset": 4,
+                            "x_scale": 0.52,
+                            "y_scale": 0.52,
+                            "object_position": 1
+                        }
+                    )
+                elif sval.lower() == "nan" or sval == "":
+                    ws.write_blank(fila_xls, col_xls, None, fmt_c)
+                else:
+                    # Malla (▲/▼) y Anulado (—) permanecen centrados como símbolos.
+                    ws.write(fila_xls, col_xls, sval, fmt_c)
 
         r += len(df_export)+3
 
