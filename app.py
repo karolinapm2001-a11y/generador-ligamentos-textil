@@ -159,24 +159,26 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
         )
 
     elif sym == 6:
-        # Referencia de ficha: pico hacia ARRIBA sobre la línea
-        # y círculo pequeño debajo, tangente a la línea base.
+        # Referencia de ficha: línea horizontal continua + zigzag.
+        # La parte BAJA del zigzag coincide con el centro de cada círculo
+        # sobre la línea base; los picos quedan ENTRE círculos.
         ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
 
-        # ∧ sobre la línea: los extremos nacen exactamente en la línea base.
+        # V con valle exactamente en la línea base (sobre el círculo).
+        # Al repetirse, los extremos altos se unen y forman los picos
+        # entre una aguja y la siguiente, como en la ficha de referencia.
         ax.plot(
-            [x0 + width*0.18, xm, x0 + width*0.82],
-            [y0, y0 + height*0.54, y0],
+            [x0, xm, x1],
+            [y0 + height*0.62, y0, y0 + height*0.62],
             color="black",
             lw=lw
         )
 
-        # Círculo más pequeño, como en la ficha de referencia.
-        r6 = min(width*0.115, height*0.22)
+        # Círculo con el tamaño normal del catálogo, tangente a la línea.
         ax.add_patch(
             Circle(
-                (xm, y0-r6),
-                r6,
+                (xm, y0-r),
+                r,
                 fill=False,
                 color="black",
                 lw=lw
