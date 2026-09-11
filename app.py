@@ -93,7 +93,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.7 · Dial primero en tabla de agujas")
+st.caption("Versión 5.8 · Orden de agujas según ficha 23046-1")
 
 # =========================================================
 # LIGAMENTO
@@ -341,10 +341,19 @@ def ensure_needle_state(n_agujas, visible_slots, fontura_name="Mono"):
         st.session_state[key] = df
     return key
 
+def _orden_visual_agujas(n_agujas, fontura_name):
+    """Orden visual: Cilindro N→1; Plato/Dial y Mono 1→N."""
+    numeros = range(n_agujas, 0, -1) if fontura_name == "Cilindro" else range(1, n_agujas + 1)
+    return [f"Aguja {a}" for a in numeros]
+
+
 def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
     st.markdown(f"**{title}**")
 
     leva_key = ensure_leva_state(n_agujas, n_sistemas, fontura_name)
+    # Solo cambia el orden visual de las filas; no cambia Malla/Retención/Anulado/Vacío.
+    orden_filas = _orden_visual_agujas(n_agujas, fontura_name)
+    df_estado = st.session_state[leva_key].reindex(orden_filas)
 
     leva_columns = {
         f"Sistema {s}": st.column_config.SelectboxColumn(
@@ -356,7 +365,7 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
     }
 
     df_edit = st.data_editor(
-        st.session_state[leva_key],
+        df_estado,
         column_config=leva_columns,
         use_container_width=True,
         num_rows="fixed",
@@ -396,6 +405,9 @@ def make_needle_editor(title, n_agujas, visible_slots, fontura_name):
     st.markdown(f"**{title}**")
 
     needle_key = ensure_needle_state(n_agujas, visible_slots, fontura_name)
+    # Mantiene la selección asociada a cada aguja y solo cambia su posición visual.
+    orden_filas = _orden_visual_agujas(n_agujas, fontura_name)
+    df_estado = st.session_state[needle_key].reindex(orden_filas)
 
     needle_columns = {
         f"Rep. {p}": st.column_config.CheckboxColumn(
@@ -406,7 +418,7 @@ def make_needle_editor(title, n_agujas, visible_slots, fontura_name):
     }
 
     df_edit = st.data_editor(
-        st.session_state[needle_key],
+        df_estado,
         column_config=needle_columns,
         use_container_width=True,
         num_rows="fixed",
