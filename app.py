@@ -159,23 +159,24 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
         )
 
     elif sym == 6:
-        # V invertida/cruce hacia abajo con círculo debajo de la línea
-        # línea horizontal
+        # Referencia de ficha: pico hacia ARRIBA sobre la línea
+        # y círculo pequeño debajo, tangente a la línea base.
         ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
 
-        # dos diagonales hacia el centro superior/inferior según referencia
+        # ∧ sobre la línea: los extremos nacen exactamente en la línea base.
         ax.plot(
-            [x0+width*0.18, xm, x0+width*0.82],
-            [y0+height*0.46, y0-height*0.18, y0+height*0.46],
+            [x0 + width*0.18, xm, x0 + width*0.82],
+            [y0, y0 + height*0.54, y0],
             color="black",
             lw=lw
         )
 
-        # círculo debajo de la línea, tocando la línea
+        # Círculo más pequeño, como en la ficha de referencia.
+        r6 = min(width*0.115, height*0.22)
         ax.add_patch(
             Circle(
-                (xm, y0-r),
-                r,
+                (xm, y0-r6),
+                r6,
                 fill=False,
                 color="black",
                 lw=lw
@@ -227,6 +228,18 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
 
     for i, seq in enumerate(system_sequences):
         y = (n - 1 - i) * row_gap
+
+        # Número de sistema al lado izquierdo del ligamento
+        ax.text(
+            -0.55,
+            y,
+            str(i + 1),
+            ha="center",
+            va="center",
+            fontsize=11,
+            fontweight="bold",
+            color="#111111"
+        )
 
         # Repetición continua del ligamento
         for pos in range(visible_slots):
@@ -296,7 +309,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         color="#17365D"
     )
 
-    ax.set_xlim(-0.4, lig_width + 4.35)
+    ax.set_xlim(-0.95, lig_width + 4.35)
     ax.set_ylim(-1.05, top_y + 1.15)
 
     # Mantener numeración inferior del eje X
