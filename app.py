@@ -488,6 +488,15 @@ with left:
         placeholder="Ej. 22239"
     )
 
+    numero_item = st.number_input(
+        "Ítem",
+        min_value=1,
+        max_value=99,
+        value=1,
+        step=1,
+        help="Se agrega al nombre de los archivos exportados."
+    )
+
     tipo_fontura = st.selectbox(
         "Tipo de fontura",
         ["Monofontura", "Doblefontura"],
@@ -971,11 +980,14 @@ def generar_zip_png():
     aguja_buffer.seek(0)
 
     ficha = str(numero_ficha).strip() or "ficha"
+    item = str(int(numero_item))
+    base_archivo = f"{ficha}{item}"
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(f"{ficha}-1.png", lig_buffer.getvalue())
-        zf.writestr(f"{ficha}-2.png", leva_buffer.getvalue())
-        zf.writestr(f"{ficha}-3.png", aguja_buffer.getvalue())
+        # FICHA + ÍTEM + TIPO: 1=Ligamento, 2=Levas, 3=Agujas
+        zf.writestr(f"{base_archivo}1.png", lig_buffer.getvalue())
+        zf.writestr(f"{base_archivo}2.png", leva_buffer.getvalue())
+        zf.writestr(f"{base_archivo}3.png", aguja_buffer.getvalue())
 
     zip_buffer.seek(0)
     return zip_buffer.getvalue()
@@ -1211,7 +1223,7 @@ st.divider()
 st.download_button(
     "⬇️ EXPORTAR RESULTADO A EXCEL",
     data=generar_excel(),
-    file_name=f"{str(numero_ficha).strip() or 'ficha'}-ligamento.xlsx",
+    file_name=f"{str(numero_ficha).strip() or 'ficha'}{int(numero_item)}-ligamento.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
@@ -1219,7 +1231,7 @@ st.download_button(
 st.download_button(
     "🗂️ EXPORTAR 3 PNG EN ZIP",
     data=generar_zip_png(),
-    file_name=f"{str(numero_ficha).strip() or 'ficha'}_imagenes.zip",
+    file_name=f"{str(numero_ficha).strip() or 'ficha'}{int(numero_item)}_imagenes.zip",
     mime="application/zip"
 )
 
