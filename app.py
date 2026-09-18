@@ -243,8 +243,9 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
 
     # El dibujo conserva espacio para descripción/material, pero evita el efecto
     # excesivamente ancho de la versión anterior.
-    fig_w = max(10.2, lig_width + 4.25)
-    fig_h = max(3.2, n * 0.70 + 0.85)
+    # Exportación compacta: evita grandes áreas vacías al escalar en el portal.
+    fig_w = max(7.2, lig_width + 3.85)
+    fig_h = max(1.8, n * 0.70 + 0.55)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.set_facecolor("white")
@@ -334,7 +335,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     )
 
     ax.set_xlim(-0.62, lig_width + 3.55)
-    ax.set_ylim(-0.58, top_y + 0.83)
+    ax.set_ylim(-0.48, top_y + 0.68)
     ax.set_xticks([])
     ax.set_yticks([])
 
@@ -342,7 +343,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     for sp in ax.spines.values():
         sp.set_visible(False)
 
-    fig.tight_layout(pad=0.35)
+    fig.tight_layout(pad=0.08)
     return fig
 
 # =========================================================
@@ -730,15 +731,16 @@ def leva_dataframe_to_png(df, title, orientation="up"):
     from matplotlib.patches import Polygon
 
     rows, cols = df.shape
-    fig_w = max(7.5, cols * 1.15 + 2.2)
-    fig_h = max(3.0, rows * 0.55 + 1.8)
+    # Lienzo ajustado al contenido para que el portal no reduzca demasiado la tabla.
+    fig_w = max(4.8, cols * 0.95 + 1.25)
+    fig_h = max(2.0, rows * 0.52 + 1.15)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.set_facecolor("white")
     ax.set_xlim(0, cols + 1)
     ax.set_ylim(0, rows + 1)
     ax.axis("off")
-    ax.set_title(title, fontsize=13, fontweight="bold", color="#17365D", pad=14)
+    ax.set_title(title, fontsize=15, fontweight="bold", color="#17365D", pad=6)
 
     # grid
     for c in range(cols + 2):
@@ -749,11 +751,11 @@ def leva_dataframe_to_png(df, title, orientation="up"):
     # headers
     for j, col in enumerate(df.columns, start=1):
         ax.text(j + 0.5, rows + 0.5, str(col), ha="center", va="center",
-                fontsize=8, fontweight="bold")
+                fontsize=10, fontweight="bold")
     for i, idx in enumerate(df.index):
         y = rows - i - 0.5
         ax.text(0.5, y, str(idx), ha="center", va="center",
-                fontsize=8, fontweight="bold")
+                fontsize=10, fontweight="bold")
 
         for j, val in enumerate(df.iloc[i], start=1):
             x = j + 0.5
@@ -790,12 +792,13 @@ def leva_dataframe_to_png(df, title, orientation="up"):
 def dataframe_to_png(df, title, font_size=8):
     # Render de tabla a PNG usando matplotlib
     rows, cols = df.shape
-    fig_w = max(7.5, cols * 1.15 + 2.2)
-    fig_h = max(3.0, rows * 0.48 + 1.8)
+    # Lienzo compacto para maximizar el tamaño visible en el portal.
+    fig_w = max(4.8, cols * 0.82 + 1.20)
+    fig_h = max(2.0, rows * 0.44 + 1.10)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.axis("off")
-    ax.set_title(title, fontsize=13, fontweight="bold", color="#17365D", pad=14)
+    ax.set_title(title, fontsize=15, fontweight="bold", color="#17365D", pad=6)
 
     table = ax.table(
         cellText=df.values,
@@ -807,8 +810,8 @@ def dataframe_to_png(df, title, font_size=8):
     )
 
     table.auto_set_font_size(False)
-    table.set_fontsize(font_size)
-    table.scale(1.0, 1.45)
+    table.set_fontsize(max(font_size, 10))
+    table.scale(1.0, 1.70)
 
     # Cabeceras
     for (r, c), cell in table.get_celld().items():
@@ -840,6 +843,7 @@ def generar_zip_png():
         format="png",
         dpi=200,
         bbox_inches="tight",
+        pad_inches=0.02,
         facecolor="white"
     )
     plt.close(fig_lig)
@@ -912,6 +916,7 @@ def generar_zip_png():
             format="png",
             dpi=200,
             bbox_inches="tight",
+            pad_inches=0.02,
             facecolor="white"
         )
         plt.close(fig)
@@ -922,6 +927,7 @@ def generar_zip_png():
             format="png",
             dpi=200,
             bbox_inches="tight",
+            pad_inches=0.02,
             facecolor="white"
         )
         plt.close(fig)
@@ -974,6 +980,7 @@ def generar_zip_png():
         format="png",
         dpi=200,
         bbox_inches="tight",
+        pad_inches=0.02,
         facecolor="white"
     )
     plt.close(fig_ag)
