@@ -233,18 +233,23 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     yarns = yarns or [""] * n
 
     # Formato compacto, similar a la ficha de referencia.
-    module_w = 0.92
-    symbol_h = 0.64
+    # Tamaño grande para impresión, pero reservando columnas claras para texto.
+    module_w = 0.84
+    symbol_h = 0.60
     row_gap = 1.08
 
     lig_width = visible_slots * module_w
-    x_text1 = lig_width + 0.55
-    x_text2 = lig_width + 2.35
+    # Separación física entre Ligamento | Descripción | Material.
+    x_text1 = lig_width + 0.72
+    desc_col_w = 2.55
+    material_col_w = 2.05
+    x_text2 = x_text1 + desc_col_w + material_col_w / 2
+    x_right = x_text1 + desc_col_w + material_col_w
 
     # El dibujo conserva espacio para descripción/material, pero evita el efecto
     # excesivamente ancho de la versión anterior.
     # Exportación compacta: evita grandes áreas vacías al escalar en el portal.
-    fig_w = max(8.0, lig_width + 3.55)
+    fig_w = max(9.2, x_right + 0.30)
     fig_h = max(2.6, n * 0.95 + 0.90)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
@@ -303,13 +308,17 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
 
         # Separador suave y corto entre sistemas.
         ax.plot(
-            [-0.05, lig_width + 3.45],
+            [-0.05, x_right],
             [y - row_gap * 0.50, y - row_gap * 0.50],
             color="#E9E9E9",
             lw=0.55
         )
 
     top_y = (n - 1) * row_gap
+
+    # Separadores verticales muy suaves: ayudan a distinguir las columnas al imprimir.
+    ax.plot([lig_width + 0.38, lig_width + 0.38], [-0.42, top_y + 0.62], color="#EFEFEF", lw=0.6)
+    ax.plot([x_text1 + desc_col_w, x_text1 + desc_col_w], [-0.42, top_y + 0.62], color="#EFEFEF", lw=0.6)
 
     # Encabezados discretos, sin título grande para conservar el aspecto de ficha.
     ax.text(
@@ -334,7 +343,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         color="#17365D"
     )
 
-    ax.set_xlim(-0.62, lig_width + 3.55)
+    ax.set_xlim(-0.62, x_right + 0.15)
     ax.set_ylim(-0.48, top_y + 0.68)
     ax.set_xticks([])
     ax.set_yticks([])
