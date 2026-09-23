@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import zipfile
 from matplotlib.patches import Circle, Polygon
 from io import BytesIO
+from PIL import Image, ImageChops
 from xlsxwriter import Workbook
 
 st.set_page_config(
@@ -835,6 +836,37 @@ def dataframe_to_png(df, title, font_size=8):
     fig.tight_layout()
     return fig
 
+def _guardar_png_recortado(fig, buffer, dpi=220, margen_px=8, ancho_objetivo=1200):
+    """Guarda el gráfico como una captura: recorta todo el blanco exterior y deja un margen mínimo."""
+    tmp = BytesIO()
+    fig.savefig(
+        tmp, format="png", dpi=dpi,
+        bbox_inches="tight", pad_inches=0,
+        facecolor="white"
+    )
+    tmp.seek(0)
+    img = Image.open(tmp).convert("RGB")
+
+    # Detectar contenido: cualquier píxel que no sea casi blanco.
+    fondo = Image.new("RGB", img.size, (255, 255, 255))
+    diff = ImageChops.difference(img, fondo).convert("L")
+    # Ignora ruido muy tenue del antialiasing, pero conserva líneas grises de la tabla.
+    mask = diff.point(lambda px: 255 if px > 8 else 0)
+    bbox = mask.getbbox()
+    if bbox:
+        l, t, r, b = bbox
+        l = max(0, l - margen_px); t = max(0, t - margen_px)
+        r = min(img.width, r + margen_px); b = min(img.height, b + margen_px)
+        img = img.crop((l, t, r, b))
+
+    # Normaliza el tamaño del archivo sin volver a agregar lienzo blanco.
+    if ancho_objetivo and img.width != ancho_objetivo:
+        nuevo_alto = max(1, round(img.height * ancho_objetivo / img.width))
+        img = img.resize((ancho_objetivo, nuevo_alto), Image.Resampling.LANCZOS)
+
+    img.save(buffer, format="PNG", optimize=True)
+    buffer.seek(0)
+
 def generar_zip_png():
     zip_buffer = BytesIO()
 
@@ -847,16 +879,8 @@ def generar_zip_png():
         yarns=system_yarns,
         tipo_fontura=tipo_fontura
     )
-    fig_lig.savefig(
-        lig_buffer,
-        format="png",
-        dpi=300,
-        bbox_inches="tight",
-        pad_inches=0.02,
-        facecolor="white"
-    )
+    _guardar_png_recortado(fig_lig, lig_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
     plt.close(fig_lig)
-    lig_buffer.seek(0)
 
     # 2. Levas
     leva_buffer = BytesIO()
@@ -920,25 +944,11 @@ def generar_zip_png():
                         ax.plot([x-0.18,x+0.18],[y,y],color="black",lw=1.8)
 
         fig.tight_layout()
-        fig.savefig(
-            leva_buffer,
-            format="png",
-            dpi=300,
-            bbox_inches="tight",
-            pad_inches=0.02,
-            facecolor="white"
-        )
+        _guardar_png_recortado(fig, leva_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
         plt.close(fig)
     else:
         fig = leva_dataframe_to_png(df_leva_symbols, "DISPOSICIÓN DE LEVAS", orientation="up")
-        fig.savefig(
-            leva_buffer,
-            format="png",
-            dpi=300,
-            bbox_inches="tight",
-            pad_inches=0.02,
-            facecolor="white"
-        )
+        _guardar_png_recortado(fig, leva_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
         plt.close(fig)
 
     leva_buffer.seek(0)
@@ -984,16 +994,8 @@ def generar_zip_png():
         titulo_ag, df_ag_export = needle_exports[0]
         fig_ag = dataframe_to_png(df_ag_export.fillna(""), titulo_ag)
 
-    fig_ag.savefig(
-        aguja_buffer,
-        format="png",
-        dpi=300,
-        bbox_inches="tight",
-        pad_inches=0.02,
-        facecolor="white"
-    )
+    _guardar_png_recortado(fig_ag, aguja_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
     plt.close(fig_ag)
-    aguja_buffer.seek(0)
 
     ficha = str(numero_ficha).strip() or "ficha"
     item = str(int(numero_item))
