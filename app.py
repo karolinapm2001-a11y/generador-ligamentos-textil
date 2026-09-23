@@ -266,7 +266,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(i + 1),
             ha="center",
             va="center",
-            fontsize=13,
+            fontsize=18,
             fontweight="bold",
             color="#111111"
         )
@@ -281,7 +281,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
                 y0=y,
                 width=module_w,
                 height=symbol_h,
-                lw=2.0
+                lw=2.6
             )
 
         # Comentario / descripción a la derecha. Se respetan saltos de línea.
@@ -291,7 +291,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(labels[i]) if i < len(labels) else "",
             ha="left",
             va="center",
-            fontsize=11.0,
+            fontsize=17.0,
             fontweight="bold",
             linespacing=1.05,
             color="#111111"
@@ -303,7 +303,8 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(yarns[i]) if i < len(yarns) else "",
             ha="center",
             va="center",
-            fontsize=10.5,
+            fontsize=16.0,
+            fontweight="bold",
             color="#111111"
         )
 
@@ -328,7 +329,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         "TIPO / DESCRIPCIÓN",
         ha="left",
         va="bottom",
-        fontsize=10.5,
+        fontsize=14.0,
         fontweight="bold",
         color="#17365D"
     )
@@ -339,7 +340,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         "HILO / MATERIAL",
         ha="center",
         va="bottom",
-        fontsize=10.5,
+        fontsize=14.0,
         fontweight="bold",
         color="#17365D"
     )
@@ -1254,7 +1255,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.12: selección de agujas con repeticiones independientes del N° de agujas y del ligamento. "
+    "V5.13: letras de ligamento ampliadas para impresión.  selección de agujas con repeticiones independientes del N° de agujas y del ligamento. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
