@@ -233,19 +233,19 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     yarns = yarns or [""] * n
 
     # Formato compacto, similar a la ficha de referencia.
-    module_w = 0.72
-    symbol_h = 0.50
-    row_gap = 0.88
+    module_w = 0.92
+    symbol_h = 0.64
+    row_gap = 1.08
 
     lig_width = visible_slots * module_w
-    x_text1 = lig_width + 0.72
-    x_text2 = lig_width + 2.55
+    x_text1 = lig_width + 0.55
+    x_text2 = lig_width + 2.35
 
     # El dibujo conserva espacio para descripción/material, pero evita el efecto
     # excesivamente ancho de la versión anterior.
     # Exportación compacta: evita grandes áreas vacías al escalar en el portal.
-    fig_w = max(7.2, lig_width + 3.85)
-    fig_h = max(1.8, n * 0.70 + 0.55)
+    fig_w = max(8.0, lig_width + 3.55)
+    fig_h = max(2.6, n * 0.95 + 0.90)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.set_facecolor("white")
@@ -260,7 +260,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(i + 1),
             ha="center",
             va="center",
-            fontsize=9,
+            fontsize=13,
             fontweight="bold",
             color="#111111"
         )
@@ -275,7 +275,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
                 y0=y,
                 width=module_w,
                 height=symbol_h,
-                lw=1.45
+                lw=2.0
             )
 
         # Comentario / descripción a la derecha. Se respetan saltos de línea.
@@ -285,7 +285,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(labels[i]) if i < len(labels) else "",
             ha="left",
             va="center",
-            fontsize=8.0,
+            fontsize=11.0,
             fontweight="bold",
             linespacing=1.05,
             color="#111111"
@@ -297,7 +297,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
             str(yarns[i]) if i < len(yarns) else "",
             ha="center",
             va="center",
-            fontsize=7.8,
+            fontsize=10.5,
             color="#111111"
         )
 
@@ -318,7 +318,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         "TIPO / DESCRIPCIÓN",
         ha="left",
         va="bottom",
-        fontsize=7.8,
+        fontsize=10.5,
         fontweight="bold",
         color="#17365D"
     )
@@ -329,7 +329,7 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         "HILO / MATERIAL",
         ha="center",
         va="bottom",
-        fontsize=7.8,
+        fontsize=10.5,
         fontweight="bold",
         color="#17365D"
     )
@@ -732,15 +732,15 @@ def leva_dataframe_to_png(df, title, orientation="up"):
 
     rows, cols = df.shape
     # Lienzo ajustado al contenido para que el portal no reduzca demasiado la tabla.
-    fig_w = max(4.8, cols * 0.95 + 1.25)
-    fig_h = max(2.0, rows * 0.52 + 1.15)
+    fig_w = max(7.5, cols * 1.18 + 1.65)
+    fig_h = max(3.2, rows * 0.78 + 1.55)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.set_facecolor("white")
     ax.set_xlim(0, cols + 1)
     ax.set_ylim(0, rows + 1)
     ax.axis("off")
-    ax.set_title(title, fontsize=15, fontweight="bold", color="#17365D", pad=6)
+    ax.set_title(title, fontsize=20, fontweight="bold", color="#17365D", pad=6)
 
     # grid
     for c in range(cols + 2):
@@ -751,11 +751,11 @@ def leva_dataframe_to_png(df, title, orientation="up"):
     # headers
     for j, col in enumerate(df.columns, start=1):
         ax.text(j + 0.5, rows + 0.5, str(col), ha="center", va="center",
-                fontsize=10, fontweight="bold")
+                fontsize=14, fontweight="bold")
     for i, idx in enumerate(df.index):
         y = rows - i - 0.5
         ax.text(0.5, y, str(idx), ha="center", va="center",
-                fontsize=10, fontweight="bold")
+                fontsize=14, fontweight="bold")
 
         for j, val in enumerate(df.iloc[i], start=1):
             x = j + 0.5
@@ -793,12 +793,12 @@ def dataframe_to_png(df, title, font_size=8):
     # Render de tabla a PNG usando matplotlib
     rows, cols = df.shape
     # Lienzo compacto para maximizar el tamaño visible en el portal.
-    fig_w = max(4.8, cols * 0.82 + 1.20)
-    fig_h = max(2.0, rows * 0.44 + 1.10)
+    fig_w = max(7.5, cols * 1.05 + 1.60)
+    fig_h = max(3.2, rows * 0.72 + 1.50)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.axis("off")
-    ax.set_title(title, fontsize=15, fontweight="bold", color="#17365D", pad=6)
+    ax.set_title(title, fontsize=20, fontweight="bold", color="#17365D", pad=6)
 
     table = ax.table(
         cellText=df.values,
@@ -810,8 +810,8 @@ def dataframe_to_png(df, title, font_size=8):
     )
 
     table.auto_set_font_size(False)
-    table.set_fontsize(max(font_size, 10))
-    table.scale(1.0, 1.70)
+    table.set_fontsize(max(font_size, 13))
+    table.scale(1.15, 2.05)
 
     # Cabeceras
     for (r, c), cell in table.get_celld().items():
@@ -841,7 +841,7 @@ def generar_zip_png():
     fig_lig.savefig(
         lig_buffer,
         format="png",
-        dpi=200,
+        dpi=300,
         bbox_inches="tight",
         pad_inches=0.02,
         facecolor="white"
@@ -914,7 +914,7 @@ def generar_zip_png():
         fig.savefig(
             leva_buffer,
             format="png",
-            dpi=200,
+            dpi=300,
             bbox_inches="tight",
             pad_inches=0.02,
             facecolor="white"
@@ -925,7 +925,7 @@ def generar_zip_png():
         fig.savefig(
             leva_buffer,
             format="png",
-            dpi=200,
+            dpi=300,
             bbox_inches="tight",
             pad_inches=0.02,
             facecolor="white"
@@ -978,7 +978,7 @@ def generar_zip_png():
     fig_ag.savefig(
         aguja_buffer,
         format="png",
-        dpi=200,
+        dpi=300,
         bbox_inches="tight",
         pad_inches=0.02,
         facecolor="white"
