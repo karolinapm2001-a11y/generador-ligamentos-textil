@@ -406,15 +406,33 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
         for s in range(1,n_sistemas+1)
     }
 
+    # Editor con clave estable por fontura. Mantener una key que cambia con las
+    # dimensiones puede hacer que React intente desmontar un componente que ya
+    # fue reemplazado durante el rerun (removeChild / NotFoundError).
+    editor_key = f"leva_editor_{fontura_name}"
+
+    # Si cambió la forma de la matriz, limpiamos únicamente el estado interno
+    # del widget antes de volver a dibujarlo. La matriz real sigue guardada en
+    # leva_key y conserva la lógica Aguja × Sistema.
+    shape_key = f"{editor_key}_shape"
+    current_shape = (int(n_agujas), int(n_sistemas))
+    if st.session_state.get(shape_key) != current_shape:
+        st.session_state.pop(editor_key, None)
+        st.session_state[shape_key] = current_shape
+
     df_edit = st.data_editor(
         df_estado,
         column_config=leva_columns,
         use_container_width=True,
         num_rows="fixed",
-        key=f"leva_editor_{fontura_name}_{n_agujas}_{n_sistemas}"
+        key=editor_key
     )
 
-    st.session_state[leva_key] = df_edit.copy()
+    # Actualizar la matriz persistente sin sustituir el estado interno del
+    # data_editor. Reindexamos al orden lógico original para que Plato/Dial
+    # pueda mostrarse N→1 sin alterar los datos guardados.
+    base_index = st.session_state[leva_key].index
+    st.session_state[leva_key] = df_edit.reindex(base_index).copy()
 
     # Orientación de las levas según fontura.
     # Cilindro: triángulo y trapecio hacia arriba.
@@ -459,15 +477,24 @@ def make_needle_editor(title, n_agujas, visible_slots, fontura_name):
         for p in range(1,visible_slots+1)
     }
 
+    # Misma estrategia de estabilidad que en el editor de levas.
+    editor_key = f"needle_editor_{fontura_name}"
+    shape_key = f"{editor_key}_shape"
+    current_shape = (int(n_agujas), int(visible_slots))
+    if st.session_state.get(shape_key) != current_shape:
+        st.session_state.pop(editor_key, None)
+        st.session_state[shape_key] = current_shape
+
     df_edit = st.data_editor(
         df_estado,
         column_config=needle_columns,
         use_container_width=True,
         num_rows="fixed",
-        key=f"needle_editor_{fontura_name}_{n_agujas}_{visible_slots}"
+        key=editor_key
     )
 
-    st.session_state[needle_key] = df_edit.copy()
+    base_index = st.session_state[needle_key].index
+    st.session_state[needle_key] = df_edit.reindex(base_index).copy()
 
     df_symbols = df_edit.copy()
     for col in df_symbols.columns:
