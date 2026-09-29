@@ -223,11 +223,12 @@ def draw_catalog():
     return fig
 
 def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns=None,
-                          tipo_fontura="Monofontura", max_sistemas_bloque=12):
-    """Dibuja el ligamento en bloques de máximo 12 sistemas.
+                          tipo_fontura="Monofontura", max_sistemas_bloque=8):
+    """Dibuja el ligamento en bloques de 8 sistemas.
 
-    Hasta 12 sistemas mantiene una sola columna. Con más de 12, crea bloques
-    horizontales (1-12, 13-24, 25-36, ...), conservando la numeración real.
+    Excepción: si la ficha tiene entre 1 y 10 sistemas, mantiene un solo bloque.
+    Desde 11 sistemas, crea bloques horizontales de máximo 8
+    (1-8, 9-16, 17-24, ...), conservando la numeración real.
     """
     n = len(system_sequences)
     labels = labels or [""] * n
@@ -246,8 +247,10 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     block_gap = 1.05
     block_inner_w = lig_width + text_gap + desc_col_w + material_col_w
 
-    n_bloques = max(1, (n + max_sistemas_bloque - 1) // max_sistemas_bloque)
-    filas_max = min(max_sistemas_bloque, n)
+    # Hasta 10 sistemas se conserva un único bloque. Desde 11, bloques de 8.
+    tam_bloque = n if n <= 10 else max_sistemas_bloque
+    n_bloques = max(1, (n + tam_bloque - 1) // tam_bloque)
+    filas_max = min(tam_bloque, n)
     fig_w = max(9.2, n_bloques * block_inner_w + (n_bloques - 1) * block_gap + 0.9)
     fig_h = max(2.6, filas_max * 0.95 + 0.90)
 
@@ -255,8 +258,8 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     ax.set_facecolor("white")
 
     for b in range(n_bloques):
-        ini = b * max_sistemas_bloque
-        fin = min(ini + max_sistemas_bloque, n)
+        ini = b * tam_bloque
+        fin = min(ini + tam_bloque, n)
         cantidad = fin - ini
         x_base = b * (block_inner_w + block_gap)
         x_text1 = x_base + lig_width + text_gap
