@@ -718,107 +718,143 @@ with right:
     st.dataframe(resumen, use_container_width=True, hide_index=True)
 
 
-def leva_dataframe_to_png(df, title, orientation="up"):
+def _rangos_bloques_columnas(n_cols, max_bloque=8):
+    """1-10 columnas: un bloque. Desde 11: bloques de máximo 8."""
+    if n_cols <= 10:
+        return [(0, n_cols)]
+    return [(i, min(i + max_bloque, n_cols)) for i in range(0, n_cols, max_bloque)]
+
+
+def _dibujar_leva_bloque(ax, df, orientation="up"):
     from matplotlib.patches import Polygon
-
     rows, cols = df.shape
-    # Lienzo ajustado al contenido para que el portal no reduzca demasiado la tabla.
-    fig_w = max(7.5, cols * 1.18 + 1.65)
-    fig_h = max(3.2, rows * 0.78 + 1.55)
-
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
-    ax.set_facecolor("white")
     ax.set_xlim(0, cols + 1)
     ax.set_ylim(0, rows + 1)
     ax.axis("off")
-    ax.set_title(title, fontsize=20, fontweight="bold", color="#17365D", pad=6)
 
-    # grid
     for c in range(cols + 2):
-        ax.plot([c, c], [0, rows + 1], color="#808080", lw=0.7)
+        ax.plot([c, c], [0, rows + 1], color="#808080", lw=1.0)
     for r in range(rows + 2):
-        ax.plot([0, cols + 1], [r, r], color="#808080", lw=0.7)
+        ax.plot([0, cols + 1], [r, r], color="#808080", lw=1.0)
 
-    # headers
     for j, col in enumerate(df.columns, start=1):
-        ax.text(j + 0.5, rows + 0.5, str(col).replace("Sistema ", "S"), ha="center", va="center",
-                fontsize=18, fontweight="bold")
+        ax.text(j + 0.5, rows + 0.5, str(col).replace("Sistema ", "S"),
+                ha="center", va="center", fontsize=16, fontweight="bold")
     for i, idx in enumerate(df.index):
         y = rows - i - 0.5
-        ax.text(0.5, y, str(idx), ha="center", va="center",
-                fontsize=18, fontweight="bold")
-
+        ax.text(0.5, y, str(idx), ha="center", va="center", fontsize=16, fontweight="bold")
         for j, val in enumerate(df.iloc[i], start=1):
             x = j + 0.5
             sval = str(val).strip()
-
             if sval in ("▲", "▼"):
                 if orientation == "down" or sval == "▼":
-                    pts = [(x-0.16, y+0.12), (x+0.16, y+0.12), (x, y-0.16)]
+                    pts = [(x-0.18,y+0.15),(x+0.18,y+0.15),(x,y-0.18)]
                 else:
-                    pts = [(x-0.16, y-0.12), (x+0.16, y-0.12), (x, y+0.16)]
+                    pts = [(x-0.18,y-0.15),(x+0.18,y-0.15),(x,y+0.18)]
                 ax.add_patch(Polygon(pts, closed=True, facecolor="black", edgecolor="black"))
-
             elif sval in ("TRAP", "⏢", "⏥"):
                 if orientation == "down":
-                    # Trapecio hacia abajo: ancho arriba, angosto abajo
-                    pts = [(x-0.18, y+0.14), (x+0.18, y+0.14),
-                           (x+0.11, y-0.14), (x-0.11, y-0.14)]
+                    pts = [(x-0.20,y+0.16),(x+0.20,y+0.16),(x+0.12,y-0.16),(x-0.12,y-0.16)]
                 else:
-                    # Trapecio hacia arriba: angosto arriba, ancho abajo
-                    pts = [(x-0.11, y+0.14), (x+0.11, y+0.14),
-                           (x+0.18, y-0.14), (x-0.18, y-0.14)]
-                ax.add_patch(Polygon(pts, closed=True, fill=False,
-                                     edgecolor="black", linewidth=1.7))
-
+                    pts = [(x-0.12,y+0.16),(x+0.12,y+0.16),(x+0.20,y-0.16),(x-0.20,y-0.16)]
+                ax.add_patch(Polygon(pts, closed=True, fill=False, edgecolor="black", linewidth=2.0))
             elif sval in ("—", "-", "–"):
-                ax.plot([x-0.18, x+0.18], [y, y], color="black", lw=1.8)
+                ax.plot([x-0.20, x+0.20], [y, y], color="black", lw=2.0)
 
-            elif sval:
-                ax.text(x, y, sval, ha="center", va="center", fontsize=8)
 
-    fig.tight_layout()
+def leva_dataframe_to_png(df, title, orientation="up"):
+    rangos = _rangos_bloques_columnas(df.shape[1])
+    n_b = len(rangos)
+    rows = df.shape[0]
+    fig_w = max(7.5, sum((b-a)+1 for a,b in rangos) * 1.05 + (n_b-1)*0.8)
+    fig_h = max(3.2, rows * 0.78 + 1.25)
+    fig, axes = plt.subplots(1, n_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.98)
+    for ax, (a,b) in zip(axes[0], rangos):
+        _dibujar_leva_bloque(ax, df.iloc[:, a:b], orientation)
+    fig.subplots_adjust(left=0.02, right=0.99, bottom=0.04, top=0.88, wspace=0.12)
     return fig
 
-def dataframe_to_png(df, title, font_size=8):
-    # Render de tabla a PNG usando matplotlib
-    rows, cols = df.shape
-    # Lienzo compacto para maximizar el tamaño visible en el portal.
-    fig_w = max(7.5, cols * 1.05 + 1.60)
-    fig_h = max(3.2, rows * 0.72 + 1.50)
 
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
+def _dibujar_agujas_bloque(ax, df, font_size=16):
     ax.axis("off")
-    ax.set_title(title, fontsize=20, fontweight="bold", color="#17365D", pad=6)
-
     table = ax.table(
-        cellText=df.values,
+        cellText=df.fillna("").values,
         rowLabels=df.index,
         colLabels=df.columns,
-        cellLoc="center",
-        rowLoc="center",
-        loc="upper center",
-        bbox=[0.0, 0.02, 1.0, 0.88]
+        cellLoc="center", rowLoc="center", loc="center",
+        bbox=[0.0, 0.02, 1.0, 0.96]
     )
-
     table.auto_set_font_size(False)
-    table.set_fontsize(max(font_size, 18))
-    table.scale(1.15, 2.05)
-
-    # Cabeceras
-    for (r, c), cell in table.get_celld().items():
+    table.set_fontsize(font_size)
+    for (r,c), cell in table.get_celld().items():
         cell.set_edgecolor("#808080")
-        cell.set_linewidth(1.15)
+        cell.set_linewidth(1.2)
         if r == 0 or c == -1:
             cell.set_text_props(weight="bold")
             cell.set_facecolor("#F2F2F2")
         else:
             cell.set_facecolor("white")
-            # La marca I de aguja seleccionada debe verse más fuerte al imprimir.
             if str(cell.get_text().get_text()).strip() == "I":
-                cell.set_text_props(weight="bold", fontsize=max(font_size, 20))
+                cell.set_text_props(weight="bold", fontsize=font_size+2)
 
-    fig.tight_layout()
+
+def dataframe_to_png(df, title, font_size=16):
+    rangos = _rangos_bloques_columnas(df.shape[1])
+    n_b = len(rangos)
+    rows = df.shape[0]
+    fig_w = max(7.5, sum((b-a)+1 for a,b in rangos) * 1.0 + (n_b-1)*0.8)
+    fig_h = max(3.2, rows * 0.72 + 1.20)
+    fig, axes = plt.subplots(1, n_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.98)
+    for ax, (a,b) in zip(axes[0], rangos):
+        _dibujar_agujas_bloque(ax, df.iloc[:, a:b], font_size=max(font_size,16))
+    fig.subplots_adjust(left=0.02, right=0.99, bottom=0.04, top=0.88, wspace=0.12)
+    return fig
+
+
+def _levas_doble_to_png(tablas):
+    # tablas: [(titulo, df, orientacion), ...]
+    max_b = max(len(_rangos_bloques_columnas(df.shape[1])) for _,df,_ in tablas)
+    rows_total = sum(df.shape[0] for _,df,_ in tablas)
+    max_cols = max(min(10, df.shape[1]) if df.shape[1] <= 10 else 8 for _,df,_ in tablas)
+    fig_w = max(8.5, max_b * (max_cols + 1) * 1.05 + (max_b-1)*0.8)
+    fig_h = max(6.0, rows_total * 0.78 + 2.2)
+    fig, axes = plt.subplots(len(tablas), max_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    for r,(titulo,df,orient) in enumerate(tablas):
+        rangos = _rangos_bloques_columnas(df.shape[1])
+        for c in range(max_b):
+            ax=axes[r][c]
+            if c < len(rangos):
+                a,b=rangos[c]
+                _dibujar_leva_bloque(ax, df.iloc[:,a:b], orient)
+                if c == 0:
+                    ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
+            else:
+                ax.axis("off")
+    fig.subplots_adjust(left=0.02,right=0.99,bottom=0.03,top=0.96,wspace=0.12,hspace=0.28)
+    return fig
+
+
+def _agujas_doble_to_png(tablas):
+    max_b = max(len(_rangos_bloques_columnas(df.shape[1])) for _,df in tablas)
+    rows_total = sum(df.shape[0] for _,df in tablas)
+    max_cols = max(min(10, df.shape[1]) if df.shape[1] <= 10 else 8 for _,df in tablas)
+    fig_w = max(8.5, max_b * (max_cols + 1) * 1.0 + (max_b-1)*0.8)
+    fig_h = max(6.0, rows_total * 0.72 + 2.2)
+    fig, axes = plt.subplots(len(tablas), max_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    for r,(titulo,df) in enumerate(tablas):
+        rangos=_rangos_bloques_columnas(df.shape[1])
+        for c in range(max_b):
+            ax=axes[r][c]
+            if c < len(rangos):
+                a,b=rangos[c]
+                _dibujar_agujas_bloque(ax, df.iloc[:,a:b], font_size=14)
+                if c == 0:
+                    ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
+            else:
+                ax.axis("off")
+    fig.subplots_adjust(left=0.02,right=0.99,bottom=0.03,top=0.96,wspace=0.12,hspace=0.28)
     return fig
 
 def _guardar_png_recortado(fig, buffer, dpi=220, margen_px=8, ancho_objetivo=1200):
@@ -871,64 +907,10 @@ def generar_zip_png():
     leva_buffer = BytesIO()
 
     if tipo_fontura == "Doblefontura":
-        # Un PNG con Plato/Dial y Cilindro apilados
-        fig_h = 4.0 + 0.5 * (len(df_leva_cil_symbols) + len(df_leva_plato_symbols))
-        fig, axes = plt.subplots(
-            2, 1,
-            figsize=(max(8.5, n_sistemas*1.1 + 2.5), fig_h),
-            facecolor="white"
-        )
-
-        for ax, df, title, orient in [
-            (axes[0], df_leva_plato_symbols, "LEVAS - PLATO / DIAL", "down"),
-            (axes[1], df_leva_cil_symbols, "LEVAS - CILINDRO", "up"),
-        ]:
-            ax.axis("off")
-            ax.set_title(title, fontsize=12, fontweight="bold", color="#17365D", pad=10)
-
-            rows, cols = df.shape
-            ax.set_xlim(0, cols + 1)
-            ax.set_ylim(0, rows + 1)
-
-            for c in range(cols + 2):
-                ax.plot([c, c], [0, rows + 1], color="#808080", lw=0.7)
-            for r in range(rows + 2):
-                ax.plot([0, cols + 1], [r, r], color="#808080", lw=0.7)
-
-            for j, col in enumerate(df.columns, start=1):
-                ax.text(j+0.5, rows+0.5, str(col).replace("Sistema ", "S"), ha="center", va="center",
-                        fontsize=14, fontweight="bold")
-            for i, idx in enumerate(df.index):
-                y = rows-i-0.5
-                ax.text(0.5, y, str(idx), ha="center", va="center",
-                        fontsize=14, fontweight="bold")
-                for j, val in enumerate(df.iloc[i], start=1):
-                    x = j+0.5
-                    sval = str(val).strip()
-
-                    if sval in ("▲","▼"):
-                        if orient == "down":
-                            pts = [(x-0.16,y+0.12),(x+0.16,y+0.12),(x,y-0.16)]
-                        else:
-                            pts = [(x-0.16,y-0.12),(x+0.16,y-0.12),(x,y+0.16)]
-                        ax.add_patch(Polygon(pts, closed=True, facecolor="black", edgecolor="black"))
-
-                    elif sval in ("TRAP","⏢","⏥"):
-                        if orient == "down":
-                            # Plato/Dial: trapecio hacia abajo
-                            pts = [(x-0.18,y+0.14),(x+0.18,y+0.14),
-                                   (x+0.11,y-0.14),(x-0.11,y-0.14)]
-                        else:
-                            # Cilindro: trapecio hacia arriba
-                            pts = [(x-0.11,y+0.14),(x+0.11,y+0.14),
-                                   (x+0.18,y-0.14),(x-0.18,y-0.14)]
-                        ax.add_patch(Polygon(pts, closed=True, fill=False,
-                                             edgecolor="black", linewidth=1.7))
-
-                    elif sval in ("—","-","–"):
-                        ax.plot([x-0.18,x+0.18],[y,y],color="black",lw=1.8)
-
-        fig.tight_layout()
+        fig = _levas_doble_to_png([
+            ("LEVAS - PLATO / DIAL", df_leva_plato_symbols, "down"),
+            ("LEVAS - CILINDRO", df_leva_cil_symbols, "up"),
+        ])
         _guardar_png_recortado(fig, leva_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
         plt.close(fig)
     else:
@@ -942,43 +924,10 @@ def generar_zip_png():
     aguja_buffer = BytesIO()
 
     if tipo_fontura == "Doblefontura":
-        # Dos tablas separadas en una sola imagen: Plato/Dial arriba y Cilindro abajo.
-        tablas_ag = [
+        fig_ag = _agujas_doble_to_png([
             ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
             ("AGUJAS / CILINDRO", df_needle_cil_symbols),
-        ]
-        fig_h = 4.0 + 0.48 * (len(df_needle_plato_symbols) + len(df_needle_cil_symbols))
-        fig_w = max(8.5, max(df_needle_plato_symbols.shape[1], df_needle_cil_symbols.shape[1]) * 1.15 + 2.5)
-        fig_ag, axes = plt.subplots(2, 1, figsize=(fig_w, fig_h), facecolor="white")
-
-        for ax, (titulo_ag, df_ag) in zip(axes, tablas_ag):
-            ax.axis("off")
-            ax.set_title(titulo_ag, fontsize=12, fontweight="bold", color="#17365D", pad=10)
-            table = ax.table(
-                cellText=df_ag.fillna("").values,
-                rowLabels=df_ag.index,
-                colLabels=df_ag.columns,
-                cellLoc="center",
-                rowLoc="center",
-                loc="upper center",
-                bbox=[0.0, 0.02, 1.0, 0.88]
-            )
-            table.auto_set_font_size(False)
-            table.set_fontsize(14)
-            table.scale(1.0, 1.55)
-            for (r, c), cell in table.get_celld().items():
-                cell.set_edgecolor("#808080")
-                cell.set_linewidth(1.15)
-                if r == 0 or c == -1:
-                    cell.set_text_props(weight="bold")
-                    cell.set_facecolor("#F2F2F2")
-                else:
-                    cell.set_facecolor("white")
-                    # Marca I más gruesa/visible para la selección de agujas.
-                    if str(cell.get_text().get_text()).strip() == "I":
-                        cell.set_text_props(weight="bold", fontsize=17)
-
-        fig_ag.tight_layout()
+        ])
     else:
         titulo_ag, df_ag_export = needle_exports[0]
         fig_ag = dataframe_to_png(df_ag_export.fillna(""), titulo_ag)
