@@ -223,11 +223,11 @@ def draw_catalog():
     return fig
 
 def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns=None,
-                          tipo_fontura="Monofontura", max_sistemas_bloque=8):
-    """Dibuja el ligamento en bloques de máximo 8 sistemas.
+                          tipo_fontura="Monofontura", max_sistemas_bloque=12):
+    """Dibuja el ligamento en bloques de máximo 12 sistemas.
 
-    Hasta 8 sistemas mantiene una sola columna. Con más de 8, crea bloques
-    horizontales (1-8, 9-16, 17-24, ...), conservando la numeración real.
+    Hasta 12 sistemas mantiene una sola columna. Con más de 12, crea bloques
+    horizontales (1-12, 13-24, 25-36, ...), conservando la numeración real.
     """
     n = len(system_sequences)
     labels = labels or [""] * n
