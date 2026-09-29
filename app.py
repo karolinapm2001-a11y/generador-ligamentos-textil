@@ -223,137 +223,87 @@ def draw_catalog():
     return fig
 
 def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns=None,
-                          tipo_fontura="Monofontura"):
-    """Dibuja el ligamento en formato compacto tipo ficha de tejeduría.
+                          tipo_fontura="Monofontura", max_sistemas_bloque=8):
+    """Dibuja el ligamento en bloques de máximo 8 sistemas.
 
-    El área del ligamento queda más cerrada, con sistemas próximos entre sí y
-    módulos más angostos, manteniendo los comentarios y el hilo/material a la derecha.
+    Hasta 8 sistemas mantiene una sola columna. Con más de 8, crea bloques
+    horizontales (1-8, 9-16, 17-24, ...), conservando la numeración real.
     """
     n = len(system_sequences)
     labels = labels or [""] * n
     yarns = yarns or [""] * n
 
-    # Formato compacto, similar a la ficha de referencia.
-    # Tamaño grande para impresión, pero reservando columnas claras para texto.
     module_w = 0.84
     symbol_h = 0.60
     row_gap = 1.08
-
     lig_width = visible_slots * module_w
-    # Separación física entre Ligamento | Descripción | Material.
-    x_text1 = lig_width + 0.72
-    desc_col_w = 2.55
-    material_col_w = 2.05
-    x_text2 = x_text1 + desc_col_w + material_col_w / 2
-    x_right = x_text1 + desc_col_w + material_col_w
 
-    # El dibujo conserva espacio para descripción/material, pero evita el efecto
-    # excesivamente ancho de la versión anterior.
-    # Exportación compacta: evita grandes áreas vacías al escalar en el portal.
-    fig_w = max(9.2, x_right + 0.30)
-    fig_h = max(2.6, n * 0.95 + 0.90)
+    # Si existen descripciones/materiales, se mantienen dentro de cada bloque.
+    hay_texto = any(str(x).strip() for x in labels) or any(str(x).strip() for x in yarns)
+    desc_col_w = 2.55 if hay_texto else 0.0
+    material_col_w = 2.05 if hay_texto else 0.0
+    text_gap = 0.72 if hay_texto else 0.0
+    block_gap = 1.05
+    block_inner_w = lig_width + text_gap + desc_col_w + material_col_w
+
+    n_bloques = max(1, (n + max_sistemas_bloque - 1) // max_sistemas_bloque)
+    filas_max = min(max_sistemas_bloque, n)
+    fig_w = max(9.2, n_bloques * block_inner_w + (n_bloques - 1) * block_gap + 0.9)
+    fig_h = max(2.6, filas_max * 0.95 + 0.90)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
     ax.set_facecolor("white")
 
-    for i, seq in enumerate(system_sequences):
-        y = (n - 1 - i) * row_gap
+    for b in range(n_bloques):
+        ini = b * max_sistemas_bloque
+        fin = min(ini + max_sistemas_bloque, n)
+        cantidad = fin - ini
+        x_base = b * (block_inner_w + block_gap)
+        x_text1 = x_base + lig_width + text_gap
+        x_text2 = x_text1 + desc_col_w + material_col_w / 2
+        x_right = x_base + block_inner_w
 
-        # Número de sistema pegado al lado izquierdo, como en la ficha.
-        ax.text(
-            -0.34,
-            y,
-            str(i + 1),
-            ha="center",
-            va="center",
-            fontsize=18,
-            fontweight="bold",
-            color="#111111"
-        )
+        # El sistema mayor del bloque queda arriba, como en la ficha de referencia.
+        for local_i, global_i in enumerate(range(ini, fin)):
+            y = local_i * row_gap
+            seq = system_sequences[global_i]
 
-        # Repetición continua del ligamento, con módulos más angostos.
-        for pos in range(visible_slots):
-            sym = seq[pos % len(seq)]
-            draw_ligament_symbol(
-                ax,
-                sym,
-                x0=pos * module_w,
-                y0=y,
-                width=module_w,
-                height=symbol_h,
-                lw=2.6
-            )
+            ax.text(x_base - 0.34, y, str(global_i + 1), ha="center", va="center",
+                    fontsize=18, fontweight="bold", color="#111111")
 
-        # Comentario / descripción a la derecha. Se respetan saltos de línea.
-        ax.text(
-            x_text1,
-            y,
-            str(labels[i]) if i < len(labels) else "",
-            ha="left",
-            va="center",
-            fontsize=17.0,
-            fontweight="bold",
-            linespacing=1.05,
-            color="#111111"
-        )
+            for pos in range(visible_slots):
+                sym = seq[pos % len(seq)]
+                draw_ligament_symbol(ax, sym, x0=x_base + pos * module_w, y0=y,
+                                     width=module_w, height=symbol_h, lw=2.6)
 
-        ax.text(
-            x_text2,
-            y,
-            str(yarns[i]) if i < len(yarns) else "",
-            ha="center",
-            va="center",
-            fontsize=16.0,
-            fontweight="bold",
-            color="#111111"
-        )
+            if hay_texto:
+                ax.text(x_text1, y, str(labels[global_i]) if global_i < len(labels) else "",
+                        ha="left", va="center", fontsize=17.0, fontweight="bold",
+                        linespacing=1.05, color="#111111")
+                ax.text(x_text2, y, str(yarns[global_i]) if global_i < len(yarns) else "",
+                        ha="center", va="center", fontsize=16.0, fontweight="bold", color="#111111")
 
-        # Separador suave y corto entre sistemas.
-        ax.plot(
-            [-0.05, x_right],
-            [y - row_gap * 0.50, y - row_gap * 0.50],
-            color="#E9E9E9",
-            lw=0.55
-        )
+            ax.plot([x_base - 0.05, x_right], [y - row_gap * 0.50, y - row_gap * 0.50],
+                    color="#E9E9E9", lw=0.55)
 
-    top_y = (n - 1) * row_gap
+        top_y = (cantidad - 1) * row_gap
+        if hay_texto:
+            ax.plot([x_base + lig_width + 0.38, x_base + lig_width + 0.38],
+                    [-0.42, top_y + 0.62], color="#EFEFEF", lw=0.6)
+            ax.plot([x_text1 + desc_col_w, x_text1 + desc_col_w],
+                    [-0.42, top_y + 0.62], color="#EFEFEF", lw=0.6)
+            ax.text(x_text1, top_y + 0.50, "TIPO / DESCRIPCIÓN", ha="left", va="bottom",
+                    fontsize=14.0, fontweight="bold", color="#17365D")
+            ax.text(x_text2, top_y + 0.50, "HILO / MATERIAL", ha="center", va="bottom",
+                    fontsize=14.0, fontweight="bold", color="#17365D")
 
-    # Separadores verticales muy suaves: ayudan a distinguir las columnas al imprimir.
-    ax.plot([lig_width + 0.38, lig_width + 0.38], [-0.42, top_y + 0.62], color="#EFEFEF", lw=0.6)
-    ax.plot([x_text1 + desc_col_w, x_text1 + desc_col_w], [-0.42, top_y + 0.62], color="#EFEFEF", lw=0.6)
-
-    # Encabezados discretos, sin título grande para conservar el aspecto de ficha.
-    ax.text(
-        x_text1,
-        top_y + 0.50,
-        "TIPO / DESCRIPCIÓN",
-        ha="left",
-        va="bottom",
-        fontsize=14.0,
-        fontweight="bold",
-        color="#17365D"
-    )
-
-    ax.text(
-        x_text2,
-        top_y + 0.50,
-        "HILO / MATERIAL",
-        ha="center",
-        va="bottom",
-        fontsize=14.0,
-        fontweight="bold",
-        color="#17365D"
-    )
-
-    ax.set_xlim(-0.62, x_right + 0.15)
-    ax.set_ylim(-0.48, top_y + 0.68)
+    total_w = n_bloques * block_inner_w + (n_bloques - 1) * block_gap
+    ax.set_xlim(-0.62, total_w + 0.15)
+    ax.set_ylim(-0.48, (filas_max - 1) * row_gap + 0.68)
     ax.set_xticks([])
     ax.set_yticks([])
-
-    # Sin título superior grande: el resultado queda compacto como la primera imagen.
     for sp in ax.spines.values():
         sp.set_visible(False)
-
     fig.tight_layout(pad=0.08)
     return fig
 
@@ -789,11 +739,11 @@ def leva_dataframe_to_png(df, title, orientation="up"):
     # headers
     for j, col in enumerate(df.columns, start=1):
         ax.text(j + 0.5, rows + 0.5, str(col), ha="center", va="center",
-                fontsize=14, fontweight="bold")
+                fontsize=18, fontweight="bold")
     for i, idx in enumerate(df.index):
         y = rows - i - 0.5
         ax.text(0.5, y, str(idx), ha="center", va="center",
-                fontsize=14, fontweight="bold")
+                fontsize=18, fontweight="bold")
 
         for j, val in enumerate(df.iloc[i], start=1):
             x = j + 0.5
@@ -848,18 +798,21 @@ def dataframe_to_png(df, title, font_size=8):
     )
 
     table.auto_set_font_size(False)
-    table.set_fontsize(max(font_size, 13))
+    table.set_fontsize(max(font_size, 18))
     table.scale(1.15, 2.05)
 
     # Cabeceras
     for (r, c), cell in table.get_celld().items():
         cell.set_edgecolor("#808080")
-        cell.set_linewidth(0.6)
+        cell.set_linewidth(1.15)
         if r == 0 or c == -1:
             cell.set_text_props(weight="bold")
             cell.set_facecolor("#F2F2F2")
         else:
             cell.set_facecolor("white")
+            # La marca I de aguja seleccionada debe verse más fuerte al imprimir.
+            if str(cell.get_text().get_text()).strip() == "I":
+                cell.set_text_props(weight="bold", fontsize=max(font_size, 20))
 
     fig.tight_layout()
     return fig
@@ -940,11 +893,11 @@ def generar_zip_png():
 
             for j, col in enumerate(df.columns, start=1):
                 ax.text(j+0.5, rows+0.5, str(col), ha="center", va="center",
-                        fontsize=8, fontweight="bold")
+                        fontsize=14, fontweight="bold")
             for i, idx in enumerate(df.index):
                 y = rows-i-0.5
                 ax.text(0.5, y, str(idx), ha="center", va="center",
-                        fontsize=8, fontweight="bold")
+                        fontsize=14, fontweight="bold")
                 for j, val in enumerate(df.iloc[i], start=1):
                     x = j+0.5
                     sval = str(val).strip()
@@ -1006,16 +959,19 @@ def generar_zip_png():
                 loc="center"
             )
             table.auto_set_font_size(False)
-            table.set_fontsize(8)
-            table.scale(1.0, 1.35)
+            table.set_fontsize(14)
+            table.scale(1.0, 1.55)
             for (r, c), cell in table.get_celld().items():
                 cell.set_edgecolor("#808080")
-                cell.set_linewidth(0.6)
+                cell.set_linewidth(1.15)
                 if r == 0 or c == -1:
                     cell.set_text_props(weight="bold")
                     cell.set_facecolor("#F2F2F2")
                 else:
                     cell.set_facecolor("white")
+                    # Marca I más gruesa/visible para la selección de agujas.
+                    if str(cell.get_text().get_text()).strip() == "I":
+                        cell.set_text_props(weight="bold", fontsize=17)
 
         fig_ag.tight_layout()
     else:
