@@ -334,8 +334,8 @@ def ensure_needle_state(n_agujas, visible_slots, fontura_name="Mono"):
     return key
 
 def _orden_visual_agujas(n_agujas, fontura_name):
-    """Orden visual: Plato/Dial N→1; Cilindro y Mono 1→N."""
-    numeros = range(n_agujas, 0, -1) if fontura_name == "Plato" else range(1, n_agujas + 1)
+    """Orden visual ascendente normal para todas las fonturas: 1→N."""
+    numeros = range(1, n_agujas + 1)
     return [f"Aguja {a}" for a in numeros]
 
 
