@@ -466,7 +466,7 @@ with left:
     n_sistemas = st.number_input(
         "N° de sistemas",
         min_value=1,
-        max_value=32,
+        max_value=96,
         value=8,
         step=1
     )
@@ -794,7 +794,8 @@ def dataframe_to_png(df, title, font_size=8):
         colLabels=df.columns,
         cellLoc="center",
         rowLoc="center",
-        loc="center"
+        loc="upper center",
+        bbox=[0.0, 0.02, 1.0, 0.88]
     )
 
     table.auto_set_font_size(False)
@@ -956,7 +957,8 @@ def generar_zip_png():
                 colLabels=df_ag.columns,
                 cellLoc="center",
                 rowLoc="center",
-                loc="center"
+                loc="upper center",
+                bbox=[0.0, 0.02, 1.0, 0.88]
             )
             table.auto_set_font_size(False)
             table.set_fontsize(14)
