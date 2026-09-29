@@ -349,7 +349,7 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
 
     leva_columns = {
         f"Sistema {s}": st.column_config.SelectboxColumn(
-            f"Sistema {s}",
+            f"S{s}",
             options=["Malla", "Retención", "Anulado", "Vacío"],
             required=True
         )
@@ -738,7 +738,7 @@ def leva_dataframe_to_png(df, title, orientation="up"):
 
     # headers
     for j, col in enumerate(df.columns, start=1):
-        ax.text(j + 0.5, rows + 0.5, str(col), ha="center", va="center",
+        ax.text(j + 0.5, rows + 0.5, str(col).replace("Sistema ", "S"), ha="center", va="center",
                 fontsize=18, fontweight="bold")
     for i, idx in enumerate(df.index):
         y = rows - i - 0.5
@@ -893,7 +893,7 @@ def generar_zip_png():
                 ax.plot([0, cols + 1], [r, r], color="#808080", lw=0.7)
 
             for j, col in enumerate(df.columns, start=1):
-                ax.text(j+0.5, rows+0.5, str(col), ha="center", va="center",
+                ax.text(j+0.5, rows+0.5, str(col).replace("Sistema ", "S"), ha="center", va="center",
                         fontsize=14, fontweight="bold")
             for i, idx in enumerate(df.index):
                 y = rows-i-0.5
@@ -1148,7 +1148,7 @@ def generar_excel():
         ws.write(r,0,"Aguja",fmt_h)
 
         for j,col in enumerate(df_export.columns,1):
-            ws.write(r,j,col,fmt_h)
+            ws.write(r,j,str(col).replace("Sistema ", "S"),fmt_h)
 
         # Orientación visual de esta fontura en el Excel.
         orient_excel = "down" if "PLATO" in str(title).upper() or "DIAL" in str(title).upper() else "up"
