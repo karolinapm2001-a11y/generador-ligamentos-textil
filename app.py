@@ -263,9 +263,9 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
         x_text2 = x_text1 + desc_col_w + material_col_w / 2
         x_right = x_base + block_inner_w
 
-        # El sistema mayor del bloque queda arriba, como en la ficha de referencia.
+        # Orden ascendente visual de arriba hacia abajo: 1, 2, 3... / 13, 14, 15...
         for local_i, global_i in enumerate(range(ini, fin)):
-            y = local_i * row_gap
+            y = (cantidad - 1 - local_i) * row_gap
             seq = system_sequences[global_i]
 
             ax.text(x_base - 0.34, y, str(global_i + 1), ha="center", va="center",
