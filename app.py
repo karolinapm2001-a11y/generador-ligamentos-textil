@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.17 · Minijacquard compatible · Bloques verticales · Plato/Dial descendente · Cilindro ascendente")
+st.caption("Versión 5.18 · Minijacquard sin bloques en agujas · Ligamento resumido impar/par · Bloques verticales")
 
 # =========================================================
 # LIGAMENTO
@@ -308,6 +308,45 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     for sp in ax.spines.values():
         sp.set_visible(False)
     fig.tight_layout(pad=0.08)
+    return fig
+
+def draw_minijacquard_ligament(system_sequences, visible_slots=6, labels=None, yarns=None):
+    """Representación resumida Minijacquard: patrón 1 = sistemas impares, patrón 2 = sistemas pares."""
+    labels = labels or []
+    yarns = yarns or []
+    n = len(system_sequences)
+    impares = [system_sequences[i] for i in range(0, n, 2)]
+    pares = [system_sequences[i] for i in range(1, n, 2)]
+    seq1 = impares[0] if impares else [1]
+    seq2 = pares[0] if pares else seq1
+
+    module_w = 0.90
+    symbol_h = 0.68
+    slots = max(1, min(int(visible_slots), 12))
+    lig_width = slots * module_w
+    fig, ax = plt.subplots(figsize=(10.5, 4.2), facecolor="white")
+    ax.set_facecolor("white")
+
+    for num, seq, y in [(1, seq1, 2.55), (2, seq2, 1.15)]:
+        ax.text(-1.10, y, str(num), ha="center", va="center", fontsize=20, fontweight="bold", color="black")
+        # llave visual simple a la izquierda del patrón
+        ax.text(-0.35, y, "{", ha="center", va="center", fontsize=56, fontweight="normal", color="black")
+        for pos in range(slots):
+            sym = seq[pos % len(seq)]
+            draw_ligament_symbol(ax, sym, x0=pos*module_w, y0=y, width=module_w, height=symbol_h, lw=2.3)
+
+    # La ficha de referencia asigna los dos patrones a sistemas impares/pares,
+    # sin repetir gráficamente todos los sistemas reales de la máquina.
+    ax.text(-0.10, 0.18, "SISTEMAS IMPARES", ha="left", va="center", fontsize=13, color="black")
+    ax.text(-0.10, -0.10, "SISTEMAS PARES", ha="left", va="center", fontsize=13, color="black")
+    ax.plot([-1.25, lig_width], [-0.30, -0.30], color="black", lw=1.5)
+    ax.text(lig_width+0.75, 0.18, "1", ha="center", va="center", fontsize=13, fontweight="bold")
+    ax.text(lig_width+0.75, -0.10, "2", ha="center", va="center", fontsize=13, fontweight="bold")
+
+    ax.set_xlim(-1.55, lig_width+1.25)
+    ax.set_ylim(-0.48, 3.25)
+    ax.axis("off")
+    fig.tight_layout(pad=0.15)
     return fig
 
 # =========================================================
@@ -609,16 +648,15 @@ with right:
     # =====================================================
     st.markdown('<div class="section-title">4. LIGAMENTO GENERADO</div>', unsafe_allow_html=True)
 
-    st.pyplot(
-        draw_system_ligaments(
-            system_sequences,
-            visible_slots,
-            labels=system_labels,
-            yarns=system_yarns,
+    fig_lig_preview = (
+        draw_minijacquard_ligament(system_sequences, visible_slots, system_labels, system_yarns)
+        if tipo_seleccion_agujas == "Minijacquard"
+        else draw_system_ligaments(
+            system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
             tipo_fontura=tipo_fontura
-        ),
-        use_container_width=True
+        )
     )
+    st.pyplot(fig_lig_preview, use_container_width=True)
 
     # =====================================================
     # LEVAS Y AGUJAS SEGÚN FONTURA
@@ -829,6 +867,17 @@ def _dibujar_agujas_bloque(ax, df, font_size=16):
                 cell.set_text_props(weight="bold", fontsize=font_size+2)
 
 
+def minijacquard_dataframe_to_png(df, title, font_size=14):
+    """Minijacquard siempre se exporta como una sola tabla continua, sin bloques."""
+    rows, cols = df.shape
+    fig_w = max(9.0, (cols + 1) * 0.62)
+    fig_h = max(3.4, rows * 0.62 + 1.35)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor="white")
+    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.99)
+    _dibujar_agujas_bloque(ax, df, font_size=font_size)
+    fig.subplots_adjust(left=0.04, right=0.995, bottom=0.04, top=0.90)
+    return fig
+
 def dataframe_to_png(df, title, font_size=16):
     # Igual que levas: cada bloque va debajo del anterior, nunca al costado.
     rangos = _rangos_bloques_columnas(df.shape[1])
@@ -918,12 +967,13 @@ def generar_zip_png():
 
     # 1. Ligamento
     lig_buffer = BytesIO()
-    fig_lig = draw_system_ligaments(
-        system_sequences,
-        visible_slots,
-        labels=system_labels,
-        yarns=system_yarns,
-        tipo_fontura=tipo_fontura
+    fig_lig = (
+        draw_minijacquard_ligament(system_sequences, visible_slots, system_labels, system_yarns)
+        if tipo_seleccion_agujas == "Minijacquard"
+        else draw_system_ligaments(
+            system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
+            tipo_fontura=tipo_fontura
+        )
     )
     _guardar_png_recortado(fig_lig, lig_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
     plt.close(fig_lig)
@@ -955,7 +1005,10 @@ def generar_zip_png():
         ])
     else:
         titulo_ag, df_ag_export = needle_exports[0]
-        fig_ag = dataframe_to_png(df_ag_export.fillna(""), titulo_ag)
+        if tipo_seleccion_agujas == "Minijacquard":
+            fig_ag = minijacquard_dataframe_to_png(df_ag_export.fillna(""), titulo_ag)
+        else:
+            fig_ag = dataframe_to_png(df_ag_export.fillna(""), titulo_ag)
 
     _guardar_png_recortado(fig_ag, aguja_buffer, dpi=220, margen_px=6, ancho_objetivo=1200)
     plt.close(fig_ag)
@@ -1037,12 +1090,13 @@ def generar_excel():
 
     # Ligamento como imagen
     img_lig = BytesIO()
-    fig = draw_system_ligaments(
-        system_sequences,
-        visible_slots,
-        labels=system_labels,
-        yarns=system_yarns,
-        tipo_fontura=tipo_fontura
+    fig = (
+        draw_minijacquard_ligament(system_sequences, visible_slots, system_labels, system_yarns)
+        if tipo_seleccion_agujas == "Minijacquard"
+        else draw_system_ligaments(
+            system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
+            tipo_fontura=tipo_fontura
+        )
     )
     fig.savefig(
         img_lig,
@@ -1217,7 +1271,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.17: Minijacquard compatible + levas y agujas exportadas en bloques verticales (1-8, 9-16, etc.; 9-10 permanecen juntas). Letras ampliadas para impresión. "
+    "V5.18: Minijacquard exporta agujas en una sola tabla continua (sin bloques) y el ligamento se resume en patrón 1 para sistemas impares y patrón 2 para sistemas pares. En selección Normal se mantienen los bloques verticales. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
