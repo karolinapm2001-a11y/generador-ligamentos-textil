@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.19 · Minijacquard configurable por patrones · Agujas sin bloques · Bloques verticales")
+st.caption("Versión 5.20 · Manufactura controla Ligamento, Levas y Agujas · Minijacquard configurable")
 
 # =========================================================
 # LIGAMENTO
@@ -528,11 +528,30 @@ with left:
         help="Se agrega al nombre de los archivos exportados."
     )
 
-    tipo_fontura = st.selectbox(
-        "Tipo de fontura",
-        ["Monofontura", "Doblefontura"],
-        index=0
+    manufactura = st.selectbox(
+        "Manufactura",
+        ["Jersey", "Rib", "Interlock", "Minijacquard", "Otro"],
+        index=0,
+        help="La manufactura configura el comportamiento general de Ligamento, Levas y Agujas."
     )
+
+    # La manufactura gobierna la estructura general del generador.
+    # Jersey trabaja como monofontura; Rib, Interlock y Minijacquard como doblefontura.
+    # En Otro se deja la fontura libre para casos especiales.
+    if manufactura == "Jersey":
+        tipo_fontura = "Monofontura"
+        st.caption("Fontura configurada por manufactura: Monofontura")
+    elif manufactura in ["Rib", "Interlock", "Minijacquard"]:
+        tipo_fontura = "Doblefontura"
+        st.caption("Fontura configurada por manufactura: Doblefontura")
+    else:
+        tipo_fontura = st.selectbox(
+            "Tipo de fontura",
+            ["Monofontura", "Doblefontura"],
+            index=0
+        )
+
+    tipo_seleccion_agujas = "Minijacquard" if manufactura == "Minijacquard" else "Normal"
 
     if tipo_fontura == "Monofontura":
         n_agujas = st.number_input(
@@ -582,12 +601,8 @@ with left:
         help="Controla únicamente las columnas Rep. de la tabla de selección de agujas. Es independiente del N° de agujas y de las repeticiones visibles del ligamento."
     )
 
-    tipo_seleccion_agujas = st.selectbox(
-        "Tipo de selección de agujas",
-        ["Normal", "Minijacquard"],
-        help="Minijacquard permite marcar una matriz Agujas × Sistemas para formar dibujos como rombos."
-    )
     if tipo_seleccion_agujas == "Minijacquard":
+        st.info("Manufactura Minijacquard activa: ligamento por dibujos/patrones, selección Agujas × Sistemas y exportación de agujas sin bloques.")
         agrupacion_minijacquard = st.number_input(
             "Agrupar agujas de", min_value=1, max_value=8, value=2, step=1,
             help="Ej.: con 48 agujas y agrupación 2 se muestran 1-2, 3-4, ... 47-48."
@@ -623,22 +638,27 @@ with left:
             minijacquard_pattern_assignments.append(asig_ptn)
 
 
-    st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="note">'
-        'Escribe una secuencia para cada sistema. Ejemplos: '
-        '<b>1-3-5</b>, <b>2-2-4-5</b>, <b>1-1-3-4-5</b>. '
-        'El dibujo se genera automáticamente.'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
     system_sequences = []
     system_labels = []
     system_yarns = []
 
+    if tipo_seleccion_agujas != "Minijacquard":
+        st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="note">'
+            'Escribe una secuencia para cada sistema. Ejemplos: '
+            '<b>1-3-5</b>, <b>2-2-4-5</b>, <b>1-1-3-4-5</b>. '
+            'El dibujo se genera automáticamente.'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
     for s in range(1, n_sistemas+1):
+        if tipo_seleccion_agujas == "Minijacquard":
+            system_sequences.append([1])
+            system_labels.append("")
+            system_yarns.append("")
+            continue
         st.markdown(f"**Sistema {s}**")
 
         txt = st.text_input(
@@ -766,12 +786,16 @@ with right:
                 "Plato"
             )
 
-            df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
-                "Agujas / Dial",
-                int(n_agujas_plato),
-                int(needle_repetitions),
-                "Plato"
-            )
+            if tipo_seleccion_agujas == "Minijacquard":
+                # En Minijacquard la selección electrónica principal se programa en cilindro.
+                # Plato/Dial conserva una selección normal por rapport.
+                df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
+                    "Agujas / Dial", int(n_agujas_plato), int(needle_repetitions), "Plato"
+                )
+            else:
+                df_needle_plato_edit, df_needle_plato_symbols = make_needle_editor(
+                    "Agujas / Dial", int(n_agujas_plato), int(needle_repetitions), "Plato"
+                )
 
         with tab_cil:
             df_leva_cil_edit, df_leva_cil_symbols = make_leva_editor(
@@ -781,12 +805,31 @@ with right:
                 "Cilindro"
             )
 
-            df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
-                "Agujas / Cilindro",
-                int(n_agujas_cil),
-                int(needle_repetitions),
-                "Cilindro"
-            )
+            if tipo_seleccion_agujas == "Minijacquard":
+                grupos = []
+                g = int(agrupacion_minijacquard)
+                for a in range(1, int(n_agujas_cil) + 1, g):
+                    grupos.append(f"{a}-{min(a+g-1, int(n_agujas_cil))}")
+                mj_key_cil = f"minijacquard_cil_{int(n_agujas_cil)}_{int(n_sistemas)}_{g}"
+                if mj_key_cil not in st.session_state:
+                    st.session_state[mj_key_cil] = pd.DataFrame(
+                        False, index=grupos, columns=[f"S{s}" for s in range(1, int(n_sistemas)+1)]
+                    )
+                mj_cols_cil = {c: st.column_config.CheckboxColumn(c, default=False) for c in st.session_state[mj_key_cil].columns}
+                df_needle_cil_edit = st.data_editor(
+                    st.session_state[mj_key_cil], column_config=mj_cols_cil,
+                    use_container_width=True, num_rows="fixed",
+                    key=f"mj_cil_editor_{int(n_agujas_cil)}_{int(n_sistemas)}_{g}"
+                )
+                st.session_state[mj_key_cil] = df_needle_cil_edit.copy()
+                df_needle_cil_symbols = df_needle_cil_edit.copy()
+                for _col in df_needle_cil_symbols.columns:
+                    df_needle_cil_symbols[_col] = df_needle_cil_symbols[_col].map(lambda v: "X" if bool(v) else "")
+                st.caption("X = grupo de agujas seleccionado en ese sistema · Minijacquard sin bloques")
+            else:
+                df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
+                    "Agujas / Cilindro", int(n_agujas_cil), int(needle_repetitions), "Cilindro"
+                )
 
         leva_exports = [
             ("LEVAS – PLATO / DIAL", df_leva_plato_symbols),
@@ -960,6 +1003,20 @@ def _agujas_doble_to_png(tablas):
     return fig
 
 
+def _agujas_doble_minijac_to_png(tablas):
+    """Exporta las tablas de agujas completas, una debajo de otra, sin dividir columnas en bloques."""
+    max_cols = max(df.shape[1] for _, df in tablas)
+    fig_w = max(9.0, (max_cols + 1) * 0.62)
+    fig_h = max(6.0, sum(df.shape[0] * 0.72 + 1.25 for _, df in tablas))
+    fig, axes = plt.subplots(len(tablas), 1, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    for r, (titulo, df) in enumerate(tablas):
+        ax = axes[r][0]
+        _dibujar_agujas_bloque(ax, df, font_size=16)
+        ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
+    fig.subplots_adjust(left=0.03, right=0.99, bottom=0.02, top=0.98, hspace=0.34)
+    return fig
+
+
 def _guardar_png_recortado(fig, buffer, dpi=220, margen_px=8, ancho_objetivo=1200):
     """Guarda el gráfico como una captura: recorta todo el blanco exterior y deja un margen mínimo."""
     tmp = BytesIO()
@@ -1028,10 +1085,15 @@ def generar_zip_png():
     aguja_buffer = BytesIO()
 
     if tipo_fontura == "Doblefontura":
-        fig_ag = _agujas_doble_to_png([
+        tablas_ag = [
             ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
             ("AGUJAS / CILINDRO", df_needle_cil_symbols),
-        ])
+        ]
+        fig_ag = (
+            _agujas_doble_minijac_to_png(tablas_ag)
+            if tipo_seleccion_agujas == "Minijacquard"
+            else _agujas_doble_to_png(tablas_ag)
+        )
     else:
         titulo_ag, df_ag_export = needle_exports[0]
         if tipo_seleccion_agujas == "Minijacquard":
@@ -1149,8 +1211,10 @@ def generar_excel():
     ws.write("A4","N° sistemas",fmt_h)
     ws.write("B4",n_sistemas,fmt_c)
 
-    ws.write("A5","Tipo de fontura",fmt_h)
-    ws.write("B5",tipo_fontura,fmt_c)
+    ws.write("A5","Manufactura",fmt_h)
+    ws.write("B5",manufactura,fmt_c)
+    ws.write("C5","Tipo de fontura",fmt_h)
+    ws.write("D5",tipo_fontura,fmt_c)
     if tipo_fontura == "Doblefontura":
         ws.write("A6","N° agujas Cilindro",fmt_h)
         ws.write("B6",int(n_agujas_cil),fmt_c)
@@ -1300,7 +1364,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.19: Minijacquard permite definir de 1 a 12 dibujos/patrones de ligamento y asignar libremente los sistemas de cada dibujo. Agujas Minijacquard se exportan en una sola tabla continua, sin bloques. En selección Normal se mantienen los bloques verticales. "
+    "V5.20: Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
