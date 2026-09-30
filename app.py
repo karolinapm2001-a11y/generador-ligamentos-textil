@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.21 · Minijacquard por grupos configurables · Ligamento y levas adaptables")
+st.caption("Versión 5.22 · Minijacquard flexible · Sistemas × Agujas · Ligamento y levas configurables")
 
 # =========================================================
 # LIGAMENTO
@@ -624,18 +624,19 @@ with left:
     needle_repetitions = st.number_input(
         "N° de agujas por rapport",
         min_value=1,
-        max_value=40,
-        value=12,
+        max_value=64,
+        value=24,
         step=1,
         help="Controla únicamente las columnas Rep. de la tabla de selección de agujas. Es independiente del N° de agujas y de las repeticiones visibles del ligamento."
     )
 
     if tipo_seleccion_agujas == "Minijacquard":
-        st.info("Manufactura Minijacquard activa: ligamento por dibujos/patrones, selección Agujas × Sistemas y exportación de agujas sin bloques.")
+        st.info("Manufactura Minijacquard activa: ligamento y levas configurables + matriz Sistemas × Agujas del rapport, completa y sin bloques.")
         agrupacion_minijacquard = st.number_input(
-            "Agrupar agujas de", min_value=1, max_value=8, value=2, step=1,
-            help="Ej.: con 48 agujas y agrupación 2 se muestran 1-2, 3-4, ... 47-48."
+            "Agrupar sistemas de", min_value=1, max_value=8, value=2, step=1,
+            help="Agrupa las filas de la matriz Minijacquard. Ej.: 48 sistemas y agrupación 2 → 1-2, 3-4, ... 47-48. Si colocas 1, cada sistema aparece por separado."
         )
+        st.caption(f"Matriz Minijacquard: {int(n_sistemas)} sistemas × {int(needle_repetitions)} agujas por rapport.")
 
         st.markdown("**Configuración Minijacquard por grupos de sistemas**")
         st.caption("Cada ficha puede agrupar distinto. Ej.: 1-32 como un grupo y 33, 34, 35, 36 como grupos independientes.")
@@ -772,20 +773,21 @@ with right:
         )
 
         if tipo_seleccion_agujas == "Minijacquard":
-            grupos = []
             g = int(agrupacion_minijacquard)
-            for a in range(1, int(n_agujas) + 1, g):
-                grupos.append(f"{a}-{min(a+g-1, int(n_agujas))}")
-            mj_key = f"minijacquard_{int(n_agujas)}_{int(n_sistemas)}_{g}"
+            grupos = [f"{a}-{min(a+g-1, int(n_sistemas))}" if min(a+g-1, int(n_sistemas)) != a else str(a)
+                      for a in range(1, int(n_sistemas)+1, g)]
+            grupos = list(reversed(grupos))
+            columnas_ag = [str(a) for a in range(1, int(needle_repetitions)+1)]
+            mj_key = f"minijacquard_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}"
             if mj_key not in st.session_state:
-                st.session_state[mj_key] = pd.DataFrame(False, index=grupos, columns=[f"S{s}" for s in range(1, int(n_sistemas)+1)])
-            mj_cols = {c: st.column_config.CheckboxColumn(c, default=False) for c in st.session_state[mj_key].columns}
-            df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_{int(n_agujas)}_{int(n_sistemas)}_{g}")
+                st.session_state[mj_key] = pd.DataFrame(False, index=grupos, columns=columnas_ag)
+            mj_cols = {c: st.column_config.CheckboxColumn(c, default=False) for c in columnas_ag}
+            df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}")
             st.session_state[mj_key] = df_needle_edit.copy()
             df_needle_symbols = df_needle_edit.copy()
             for _col in df_needle_symbols.columns:
                 df_needle_symbols[_col] = df_needle_symbols[_col].map(lambda v: "X" if bool(v) else "")
-            st.caption("X = grupo de agujas seleccionado en ese sistema")
+            st.caption("Filas = sistemas agrupados · Columnas = agujas del rapport · X = aguja seleccionada")
         else:
             df_needle_edit, df_needle_symbols = make_needle_editor(
                 "Agujas – Monofontura",
@@ -843,26 +845,25 @@ with right:
                 )
 
             if tipo_seleccion_agujas == "Minijacquard":
-                grupos = []
                 g = int(agrupacion_minijacquard)
-                for a in range(1, int(n_agujas_cil) + 1, g):
-                    grupos.append(f"{a}-{min(a+g-1, int(n_agujas_cil))}")
-                mj_key_cil = f"minijacquard_cil_{int(n_agujas_cil)}_{int(n_sistemas)}_{g}"
+                grupos = [f"{a}-{min(a+g-1, int(n_sistemas))}" if min(a+g-1, int(n_sistemas)) != a else str(a)
+                          for a in range(1, int(n_sistemas)+1, g)]
+                grupos = list(reversed(grupos))
+                columnas_ag = [str(a) for a in range(1, int(needle_repetitions)+1)]
+                mj_key_cil = f"minijacquard_cil_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}"
                 if mj_key_cil not in st.session_state:
-                    st.session_state[mj_key_cil] = pd.DataFrame(
-                        False, index=grupos, columns=[f"S{s}" for s in range(1, int(n_sistemas)+1)]
-                    )
-                mj_cols_cil = {c: st.column_config.CheckboxColumn(c, default=False) for c in st.session_state[mj_key_cil].columns}
+                    st.session_state[mj_key_cil] = pd.DataFrame(False, index=grupos, columns=columnas_ag)
+                mj_cols_cil = {c: st.column_config.CheckboxColumn(c, default=False) for c in columnas_ag}
                 df_needle_cil_edit = st.data_editor(
                     st.session_state[mj_key_cil], column_config=mj_cols_cil,
                     use_container_width=True, num_rows="fixed",
-                    key=f"mj_cil_editor_{int(n_agujas_cil)}_{int(n_sistemas)}_{g}"
+                    key=f"mj_cil_editor_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}"
                 )
                 st.session_state[mj_key_cil] = df_needle_cil_edit.copy()
                 df_needle_cil_symbols = df_needle_cil_edit.copy()
                 for _col in df_needle_cil_symbols.columns:
                     df_needle_cil_symbols[_col] = df_needle_cil_symbols[_col].map(lambda v: "X" if bool(v) else "")
-                st.caption("X = grupo de agujas seleccionado en ese sistema · Minijacquard sin bloques")
+                st.caption("Filas = sistemas agrupados · Columnas = agujas del rapport · X = aguja seleccionada · sin bloques")
             else:
                 df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
                     "Agujas / Cilindro", int(n_agujas_cil), int(needle_repetitions), "Cilindro"
@@ -1408,7 +1409,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.21: Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
+    "V5.22: Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
