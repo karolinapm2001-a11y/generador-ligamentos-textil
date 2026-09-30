@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.22 · Minijacquard flexible · Sistemas × Agujas · Ligamento y levas configurables")
+st.caption("Versión 5.23 · Minijacquard flexible · Plato/Cilindro par-impar configurable")
 
 # =========================================================
 # LIGAMENTO
@@ -526,6 +526,18 @@ def make_needle_editor(title, n_agujas, visible_slots, fontura_name):
     st.caption("I = Aguja seleccionada")
     return df_edit, df_symbols
 
+def _filas_minijacquard_paridad(n_sistemas, plato_impar=True):
+    """Crea filas visuales Plato | Cilindro respetando par/impar, de mayor a menor."""
+    plato = [s for s in range(1, int(n_sistemas)+1) if (s % 2 == 1) == plato_impar]
+    cilindro = [s for s in range(1, int(n_sistemas)+1) if (s % 2 == 1) != plato_impar]
+    pares = []
+    m = max(len(plato), len(cilindro))
+    for i in range(m):
+        p = plato[i] if i < len(plato) else ""
+        c = cilindro[i] if i < len(cilindro) else ""
+        pares.append(f"{p} | {c}")
+    return list(reversed(pares))
+
 # =========================================================
 # INTERFAZ
 # =========================================================
@@ -632,11 +644,19 @@ with left:
 
     if tipo_seleccion_agujas == "Minijacquard":
         st.info("Manufactura Minijacquard activa: ligamento y levas configurables + matriz Sistemas × Agujas del rapport, completa y sin bloques.")
-        agrupacion_minijacquard = st.number_input(
-            "Agrupar sistemas de", min_value=1, max_value=8, value=2, step=1,
-            help="Agrupa las filas de la matriz Minijacquard. Ej.: 48 sistemas y agrupación 2 → 1-2, 3-4, ... 47-48. Si colocas 1, cada sistema aparece por separado."
+        distribucion_mj = st.radio(
+            "Distribución de sistemas por fontura",
+            ["Plato = Impares | Cilindro = Pares", "Plato = Pares | Cilindro = Impares"],
+            horizontal=False,
+            help="Define qué paridad corresponde a cada fontura. El generador calcula automáticamente los sistemas de Plato y Cilindro."
         )
-        st.caption(f"Matriz Minijacquard: {int(n_sistemas)} sistemas × {int(needle_repetitions)} agujas por rapport.")
+        plato_impar_mj = distribucion_mj.startswith("Plato = Impares")
+        plato_sistemas_mj = [s for s in range(1, int(n_sistemas)+1) if (s % 2 == 1) == plato_impar_mj]
+        cilindro_sistemas_mj = [s for s in range(1, int(n_sistemas)+1) if (s % 2 == 1) != plato_impar_mj]
+        st.caption(
+            f"Matriz Minijacquard: {int(n_sistemas)} sistemas × {int(needle_repetitions)} agujas por rapport. "
+            f"Plato: {'Impares' if plato_impar_mj else 'Pares'} · Cilindro: {'Pares' if plato_impar_mj else 'Impares'}."
+        )
 
         st.markdown("**Configuración Minijacquard por grupos de sistemas**")
         st.caption("Cada ficha puede agrupar distinto. Ej.: 1-32 como un grupo y 33, 34, 35, 36 como grupos independientes.")
@@ -773,21 +793,19 @@ with right:
         )
 
         if tipo_seleccion_agujas == "Minijacquard":
-            g = int(agrupacion_minijacquard)
-            grupos = [f"{a}-{min(a+g-1, int(n_sistemas))}" if min(a+g-1, int(n_sistemas)) != a else str(a)
-                      for a in range(1, int(n_sistemas)+1, g)]
-            grupos = list(reversed(grupos))
+            grupos = _filas_minijacquard_paridad(int(n_sistemas), plato_impar_mj)
             columnas_ag = [str(a) for a in range(1, int(needle_repetitions)+1)]
-            mj_key = f"minijacquard_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}"
+            paridad_key = "PI_CP" if plato_impar_mj else "PP_CI"
+            mj_key = f"minijacquard_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{paridad_key}"
             if mj_key not in st.session_state:
                 st.session_state[mj_key] = pd.DataFrame(False, index=grupos, columns=columnas_ag)
             mj_cols = {c: st.column_config.CheckboxColumn(c, default=False) for c in columnas_ag}
-            df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}")
+            df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{paridad_key}")
             st.session_state[mj_key] = df_needle_edit.copy()
             df_needle_symbols = df_needle_edit.copy()
             for _col in df_needle_symbols.columns:
                 df_needle_symbols[_col] = df_needle_symbols[_col].map(lambda v: "X" if bool(v) else "")
-            st.caption("Filas = sistemas agrupados · Columnas = agujas del rapport · X = aguja seleccionada")
+            st.caption(f"Filas = PLATO | CILINDRO ({'impares | pares' if plato_impar_mj else 'pares | impares'}) · Columnas = agujas del rapport · X = aguja seleccionada")
         else:
             df_needle_edit, df_needle_symbols = make_needle_editor(
                 "Agujas – Monofontura",
@@ -845,25 +863,23 @@ with right:
                 )
 
             if tipo_seleccion_agujas == "Minijacquard":
-                g = int(agrupacion_minijacquard)
-                grupos = [f"{a}-{min(a+g-1, int(n_sistemas))}" if min(a+g-1, int(n_sistemas)) != a else str(a)
-                          for a in range(1, int(n_sistemas)+1, g)]
-                grupos = list(reversed(grupos))
+                grupos = _filas_minijacquard_paridad(int(n_sistemas), plato_impar_mj)
                 columnas_ag = [str(a) for a in range(1, int(needle_repetitions)+1)]
-                mj_key_cil = f"minijacquard_cil_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}"
+                paridad_key = "PI_CP" if plato_impar_mj else "PP_CI"
+                mj_key_cil = f"minijacquard_cil_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{paridad_key}"
                 if mj_key_cil not in st.session_state:
                     st.session_state[mj_key_cil] = pd.DataFrame(False, index=grupos, columns=columnas_ag)
                 mj_cols_cil = {c: st.column_config.CheckboxColumn(c, default=False) for c in columnas_ag}
                 df_needle_cil_edit = st.data_editor(
                     st.session_state[mj_key_cil], column_config=mj_cols_cil,
                     use_container_width=True, num_rows="fixed",
-                    key=f"mj_cil_editor_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{g}"
+                    key=f"mj_cil_editor_sysxneedle_{int(n_sistemas)}_{int(needle_repetitions)}_{paridad_key}"
                 )
                 st.session_state[mj_key_cil] = df_needle_cil_edit.copy()
                 df_needle_cil_symbols = df_needle_cil_edit.copy()
                 for _col in df_needle_cil_symbols.columns:
                     df_needle_cil_symbols[_col] = df_needle_cil_symbols[_col].map(lambda v: "X" if bool(v) else "")
-                st.caption("Filas = sistemas agrupados · Columnas = agujas del rapport · X = aguja seleccionada · sin bloques")
+                st.caption(f"Filas = PLATO | CILINDRO ({'impares | pares' if plato_impar_mj else 'pares | impares'}) · Columnas = agujas del rapport · X = aguja seleccionada · sin bloques")
             else:
                 df_needle_cil_edit, df_needle_cil_symbols = make_needle_editor(
                     "Agujas / Cilindro", int(n_agujas_cil), int(needle_repetitions), "Cilindro"
@@ -876,7 +892,7 @@ with right:
 
         needle_exports = [
             ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
-            ("AGUJAS / CILINDRO", df_needle_cil_symbols)
+            (f"PROGRAMACIÓN MINIJACQUARD – PLATO {'IMPAR' if plato_impar_mj else 'PAR'} / CILINDRO {'PAR' if plato_impar_mj else 'IMPAR'}", df_needle_cil_symbols)
         ]
 
     # =====================================================
@@ -1132,7 +1148,7 @@ def generar_zip_png():
     if tipo_fontura == "Doblefontura":
         tablas_ag = [
             ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
-            ("AGUJAS / CILINDRO", df_needle_cil_symbols),
+            (f"PROGRAMACIÓN MINIJACQUARD – PLATO {'IMPAR' if plato_impar_mj else 'PAR'} / CILINDRO {'PAR' if plato_impar_mj else 'IMPAR'}", df_needle_cil_symbols),
         ]
         fig_ag = (
             _agujas_doble_minijac_to_png(tablas_ag)
@@ -1409,7 +1425,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.22: Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
+    "V5.23: En Minijacquard se puede escoger Plato=Impares/Cilindro=Pares o Plato=Pares/Cilindro=Impares; la matriz muestra ambas fonturas por fila y conserva agujas variables. Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
