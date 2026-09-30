@@ -662,7 +662,7 @@ with right:
             mj_cols = {c: st.column_config.CheckboxColumn(c, default=False) for c in st.session_state[mj_key].columns}
             df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_{int(n_agujas)}_{int(n_sistemas)}_{g}")
             st.session_state[mj_key] = df_needle_edit.copy()
-            df_needle_symbols = df_needle_edit.map(lambda v: "X" if bool(v) else "")
+            df_needle_symbols = df_needle_edit.applymap(lambda v: "X" if bool(v) else "")
             st.caption("X = grupo de agujas seleccionado en ese sistema")
         else:
             df_needle_edit, df_needle_symbols = make_needle_editor(
