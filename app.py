@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.14 · Bloques verticales · Plato/Dial descendente · Cilindro ascendente")
+st.caption("Versión 5.17 · Minijacquard compatible · Bloques verticales · Plato/Dial descendente · Cilindro ascendente")
 
 # =========================================================
 # LIGAMENTO
@@ -662,7 +662,9 @@ with right:
             mj_cols = {c: st.column_config.CheckboxColumn(c, default=False) for c in st.session_state[mj_key].columns}
             df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_{int(n_agujas)}_{int(n_sistemas)}_{g}")
             st.session_state[mj_key] = df_needle_edit.copy()
-            df_needle_symbols = df_needle_edit.applymap(lambda v: "X" if bool(v) else "")
+            df_needle_symbols = df_needle_edit.copy()
+            for _col in df_needle_symbols.columns:
+                df_needle_symbols[_col] = df_needle_symbols[_col].map(lambda v: "X" if bool(v) else "")
             st.caption("X = grupo de agujas seleccionado en ese sistema")
         else:
             df_needle_edit, df_needle_symbols = make_needle_editor(
@@ -1215,7 +1217,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.14: levas y agujas exportadas en bloques verticales (1-8, 9-16, etc.; 9-10 permanecen juntas). Letras ampliadas para impresión. "
+    "V5.17: Minijacquard compatible + levas y agujas exportadas en bloques verticales (1-8, 9-16, etc.; 9-10 permanecen juntas). Letras ampliadas para impresión. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
