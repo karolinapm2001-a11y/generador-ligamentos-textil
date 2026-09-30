@@ -543,6 +543,18 @@ with left:
         help="Controla únicamente las columnas Rep. de la tabla de selección de agujas. Es independiente del N° de agujas y de las repeticiones visibles del ligamento."
     )
 
+    tipo_seleccion_agujas = st.selectbox(
+        "Tipo de selección de agujas",
+        ["Normal", "Minijacquard"],
+        help="Minijacquard permite marcar una matriz Agujas × Sistemas para formar dibujos como rombos."
+    )
+    if tipo_seleccion_agujas == "Minijacquard":
+        agrupacion_minijacquard = st.number_input(
+            "Agrupar agujas de", min_value=1, max_value=8, value=2, step=1,
+            help="Ej.: con 48 agujas y agrupación 2 se muestran 1-2, 3-4, ... 47-48."
+        )
+
+
     st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
 
     st.markdown(
@@ -639,12 +651,26 @@ with right:
             unsafe_allow_html=True
         )
 
-        df_needle_edit, df_needle_symbols = make_needle_editor(
-            "Agujas – Monofontura",
-            n_agujas,
-            int(needle_repetitions),
-            "Mono"
-        )
+        if tipo_seleccion_agujas == "Minijacquard":
+            grupos = []
+            g = int(agrupacion_minijacquard)
+            for a in range(1, int(n_agujas) + 1, g):
+                grupos.append(f"{a}-{min(a+g-1, int(n_agujas))}")
+            mj_key = f"minijacquard_{int(n_agujas)}_{int(n_sistemas)}_{g}"
+            if mj_key not in st.session_state:
+                st.session_state[mj_key] = pd.DataFrame(False, index=grupos, columns=[f"S{s}" for s in range(1, int(n_sistemas)+1)])
+            mj_cols = {c: st.column_config.CheckboxColumn(c, default=False) for c in st.session_state[mj_key].columns}
+            df_needle_edit = st.data_editor(st.session_state[mj_key], column_config=mj_cols, use_container_width=True, num_rows="fixed", key=f"mj_editor_{int(n_agujas)}_{int(n_sistemas)}_{g}")
+            st.session_state[mj_key] = df_needle_edit.copy()
+            df_needle_symbols = df_needle_edit.map(lambda v: "X" if bool(v) else "")
+            st.caption("X = grupo de agujas seleccionado en ese sistema")
+        else:
+            df_needle_edit, df_needle_symbols = make_needle_editor(
+                "Agujas – Monofontura",
+                n_agujas,
+                int(needle_repetitions),
+                "Mono"
+            )
 
         # Aliases para exportación
         leva_exports = [("LEVAS – MONOFONTURA", df_leva_symbols)]
