@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.20 · Manufactura controla Ligamento, Levas y Agujas · Minijacquard configurable")
+st.caption("Versión 5.21 · Minijacquard por grupos configurables · Ligamento y levas adaptables")
 
 # =========================================================
 # LIGAMENTO
@@ -310,43 +310,37 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     fig.tight_layout(pad=0.08)
     return fig
 
-def draw_minijacquard_ligament(pattern_sequences, pattern_assignments, visible_slots=6):
-    """Dibuja Minijacquard por patrones configurables, independientes del N° real de sistemas."""
-    n_pat = max(1, len(pattern_sequences))
-    module_w = 0.90
-    symbol_h = 0.68
-    slots = max(1, min(int(visible_slots), 12))
+def draw_minijacquard_ligament(group_labels, group_rows, visible_slots=6):
+    """Dibuja Minijacquard por grupos. Cada grupo puede tener una o varias filas de ligamento."""
+    slots = max(1, min(int(visible_slots), 20))
+    module_w, symbol_h, row_gap, group_gap = 0.78, 0.62, 0.92, 0.32
     lig_width = slots * module_w
-    row_gap = 1.35
-    y_top = (n_pat - 1) * row_gap + 1.25
-    footer_h = max(0.85, n_pat * 0.30 + 0.35)
-    fig_h = max(3.4, n_pat * 1.25 + footer_h)
+    total_rows = sum(max(1, len(rows)) for rows in group_rows)
+    fig_h = max(3.2, total_rows * 0.72 + len(group_rows)*0.30 + 0.7)
     fig, ax = plt.subplots(figsize=(10.5, fig_h), facecolor="white")
     ax.set_facecolor("white")
-
-    for i, seq in enumerate(pattern_sequences):
-        num = i + 1
-        y = y_top - i * row_gap
-        seq = seq or [1]
-        ax.text(-1.10, y, str(num), ha="center", va="center", fontsize=20, fontweight="bold", color="black")
-        ax.text(-0.35, y, "{", ha="center", va="center", fontsize=56, fontweight="normal", color="black")
-        for pos in range(slots):
-            sym = seq[pos % len(seq)]
-            draw_ligament_symbol(ax, sym, x0=pos*module_w, y0=y, width=module_w, height=symbol_h, lw=2.3)
-
-    footer_top = 0.25
-    for i, asignacion in enumerate(pattern_assignments):
-        y = footer_top - i * 0.30
-        texto = str(asignacion).strip() or f"PATRÓN {i+1}"
-        ax.text(-0.10, y, texto.upper(), ha="left", va="center", fontsize=12.5, color="black")
-        ax.text(lig_width+0.75, y, str(i+1), ha="center", va="center", fontsize=13, fontweight="bold")
-
-    line_y = footer_top - max(1, n_pat) * 0.30 - 0.12
-    ax.plot([-1.25, lig_width], [line_y, line_y], color="black", lw=1.5)
-    ax.set_xlim(-1.55, lig_width+1.25)
-    ax.set_ylim(line_y-0.18, y_top+0.70)
+    y = total_rows * row_gap + (len(group_rows)-1)*group_gap
+    y_max = y + 0.5
+    for gi, rows in enumerate(group_rows):
+        rows = rows or [[1]]
+        top = y
+        bottom = y - (len(rows)-1)*row_gap
+        center = (top + bottom)/2
+        label = str(group_labels[gi]).strip() or f"GRUPO {gi+1}"
+        ax.text(-1.05, center, label, ha="center", va="center", fontsize=13, color="black")
+        # llave visual del grupo
+        ax.text(-0.40, center, "{", ha="center", va="center", fontsize=max(42, 32+12*len(rows)), color="black")
+        for ri, seq in enumerate(rows):
+            yy = y - ri*row_gap
+            seq = seq or [1]
+            for pos in range(slots):
+                sym = seq[pos % len(seq)]
+                draw_ligament_symbol(ax, sym, x0=pos*module_w, y0=yy, width=module_w, height=symbol_h, lw=2.2)
+        y = bottom - row_gap - group_gap
+    ax.set_xlim(-1.55, lig_width+0.2)
+    ax.set_ylim(y-0.1, y_max)
     ax.axis("off")
-    fig.tight_layout(pad=0.15)
+    fig.tight_layout(pad=0.12)
     return fig
 
 # =========================================================
@@ -380,6 +374,41 @@ def _orden_visual_agujas(n_agujas, fontura_name):
     numeros = range(1, n_agujas + 1)
     return [f"Aguja {a}" for a in numeros]
 
+
+def _parse_system_ids(txt, n_sistemas):
+    """Acepta 1-4-33-36, 1,2,3,4 o rangos 1:4. Conserva orden y elimina duplicados."""
+    raw = str(txt).replace(",", "-").replace(";", "-").replace(" ", "-")
+    out = []
+    for part in [x for x in raw.split("-") if x.strip()]:
+        part = part.strip().upper().replace("S", "")
+        try:
+            v = int(part)
+            if 1 <= v <= int(n_sistemas) and v not in out:
+                out.append(v)
+        except:
+            pass
+    return out
+
+def make_leva_editor_custom(title, n_agujas, system_ids, fontura_name):
+    """Editor de levas solo para los sistemas representativos definidos por la ficha."""
+    ids = [int(x) for x in system_ids] or [1]
+    cols = [f"Sistema {x}" for x in ids]
+    key = f"leva_custom_{fontura_name}_{int(n_agujas)}_" + "_".join(map(str, ids))
+    if key not in st.session_state:
+        st.session_state[key] = pd.DataFrame("Anulado", index=[f"Aguja {a}" for a in range(1,int(n_agujas)+1)], columns=cols)
+    df_estado = st.session_state[key]
+    cfg = {c: st.column_config.SelectboxColumn(c.replace("Sistema ", "S"), options=["Malla","Retención","Anulado","Vacío"], required=True) for c in cols}
+    df_edit = st.data_editor(df_estado, column_config=cfg, use_container_width=True, num_rows="fixed", key=f"editor_{key}")
+    st.session_state[key] = df_edit.copy()
+    if fontura_name == "Plato":
+        mp={"Malla":"▼","Retención":"TRAP","Anulado":"—","Vacío":""}
+        st.caption("▼ = Malla   TRAP = Retención   — = Anulado / Sin tejido")
+    else:
+        mp={"Malla":"▲","Retención":"TRAP","Anulado":"—","Vacío":""}
+        st.caption("▲ = Malla   TRAP = Retención   — = Anulado / Sin tejido")
+    sy=df_edit.copy()
+    for c in sy.columns: sy[c]=sy[c].map(lambda v: mp.get(v,""))
+    return df_edit, sy
 
 def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
     st.markdown(f"**{title}**")
@@ -608,34 +637,38 @@ with left:
             help="Ej.: con 48 agujas y agrupación 2 se muestran 1-2, 3-4, ... 47-48."
         )
 
-        st.markdown("**Configuración del ligamento Minijacquard**")
-        n_patrones_mj = st.number_input(
-            "N° de dibujos / patrones de ligamento",
-            min_value=1, max_value=12, value=2, step=1,
-            help="No es el N° de sistemas. Indica cuántos dibujos distintos aparecen en la ficha."
+        st.markdown("**Configuración Minijacquard por grupos de sistemas**")
+        st.caption("Cada ficha puede agrupar distinto. Ej.: 1-32 como un grupo y 33, 34, 35, 36 como grupos independientes.")
+        n_grupos_mj = st.number_input(
+            "N° de grupos a representar", min_value=1, max_value=20, value=5, step=1,
+            help="No es el N° total de sistemas. Es la cantidad de grupos que aparecen diferenciados en la ficha."
         )
-        minijacquard_pattern_sequences = []
-        minijacquard_pattern_assignments = []
-        for ptn in range(1, int(n_patrones_mj) + 1):
-            st.markdown(f"**Dibujo {ptn}**")
-            c1, c2 = st.columns([0.8, 1.2])
+        minijacquard_group_labels = []
+        minijacquard_group_rows = []
+        minijacquard_leva_ids = []
+        for grp in range(1, int(n_grupos_mj)+1):
+            st.markdown(f"**Grupo {grp}**")
+            c1,c2,c3 = st.columns([0.8,0.8,1.4])
             with c1:
-                seq_ptn = st.text_input(
-                    "Secuencia del dibujo",
-                    value="2-1" if ptn == 1 else ("1" if ptn == 2 else "1"),
-                    key=f"mj_pattern_seq_{ptn}",
-                    placeholder="Ej. 2-1-2-1"
-                )
+                default_label = "1-32" if grp==1 else str(31+grp)
+                glabel = st.text_input("Sistemas / etiqueta", value=default_label, key=f"mj_group_label_{grp}", placeholder="Ej. 1-32 / 33 / impares")
             with c2:
-                default_asig = "Sistemas impares" if ptn == 1 else ("Sistemas pares" if ptn == 2 else f"Sistemas del dibujo {ptn}")
-                asig_ptn = st.text_input(
-                    "Asignación de sistemas",
-                    value=default_asig,
-                    key=f"mj_pattern_asig_{ptn}",
-                    placeholder="Ej. Sistemas impares / S1-S5-S9-S13"
-                )
-            minijacquard_pattern_sequences.append(parse_sequence(seq_ptn))
-            minijacquard_pattern_assignments.append(asig_ptn)
+                default_rows = 4 if grp==1 else 1
+                nrows = st.number_input("N° filas de ligamento", min_value=1, max_value=8, value=default_rows, step=1, key=f"mj_group_rows_{grp}")
+            with c3:
+                default_levas = "1-2-3-4" if grp==1 else str(31+grp)
+                levtxt = st.text_input("Sistemas visibles en levas", value=default_levas, key=f"mj_group_levas_{grp}", placeholder="Ej. 1-2-3-4")
+            rows=[]
+            for rr in range(1,int(nrows)+1):
+                seq = st.text_input(f"Secuencia fila {rr}", value="2-1" if rr%2 else "1", key=f"mj_group_{grp}_seq_{rr}", placeholder="Ej. 2-1-2-1")
+                rows.append(parse_sequence(seq))
+            minijacquard_group_labels.append(glabel)
+            minijacquard_group_rows.append(rows)
+            for sid in _parse_system_ids(levtxt, n_sistemas):
+                if sid not in minijacquard_leva_ids: minijacquard_leva_ids.append(sid)
+            st.markdown("---")
+        if not minijacquard_leva_ids:
+            minijacquard_leva_ids = [1]
 
 
     system_sequences = []
@@ -698,7 +731,7 @@ with right:
     st.markdown('<div class="section-title">4. LIGAMENTO GENERADO</div>', unsafe_allow_html=True)
 
     fig_lig_preview = (
-        draw_minijacquard_ligament(minijacquard_pattern_sequences, minijacquard_pattern_assignments, visible_slots)
+        draw_minijacquard_ligament(minijacquard_group_labels, minijacquard_group_rows, visible_slots)
         if tipo_seleccion_agujas == "Minijacquard"
         else draw_system_ligaments(
             system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
@@ -779,12 +812,14 @@ with right:
         tab_plato, tab_cil = st.tabs(["Plato / Dial", "Cilindro"])
 
         with tab_plato:
-            df_leva_plato_edit, df_leva_plato_symbols = make_leva_editor(
-                "Levas – Plato / Dial",
-                int(n_agujas_plato),
-                n_sistemas,
-                "Plato"
-            )
+            if tipo_seleccion_agujas == "Minijacquard":
+                df_leva_plato_edit, df_leva_plato_symbols = make_leva_editor_custom(
+                    "Levas – Plato / Dial", int(n_agujas_plato), minijacquard_leva_ids, "Plato"
+                )
+            else:
+                df_leva_plato_edit, df_leva_plato_symbols = make_leva_editor(
+                    "Levas – Plato / Dial", int(n_agujas_plato), n_sistemas, "Plato"
+                )
 
             if tipo_seleccion_agujas == "Minijacquard":
                 # En Minijacquard la selección electrónica principal se programa en cilindro.
@@ -798,12 +833,14 @@ with right:
                 )
 
         with tab_cil:
-            df_leva_cil_edit, df_leva_cil_symbols = make_leva_editor(
-                "Levas – Cilindro",
-                int(n_agujas_cil),
-                n_sistemas,
-                "Cilindro"
-            )
+            if tipo_seleccion_agujas == "Minijacquard":
+                df_leva_cil_edit, df_leva_cil_symbols = make_leva_editor_custom(
+                    "Levas – Cilindro", int(n_agujas_cil), minijacquard_leva_ids, "Cilindro"
+                )
+            else:
+                df_leva_cil_edit, df_leva_cil_symbols = make_leva_editor(
+                    "Levas – Cilindro", int(n_agujas_cil), n_sistemas, "Cilindro"
+                )
 
             if tipo_seleccion_agujas == "Minijacquard":
                 grupos = []
@@ -846,12 +883,19 @@ with right:
     # =====================================================
     st.markdown('<div class="section-title">7. RESUMEN DE LIGAMENTO</div>', unsafe_allow_html=True)
 
-    resumen = pd.DataFrame({
-        "Sistema": list(range(1,n_sistemas+1)),
-        "Secuencia": ["-".join(map(str,seq)) for seq in system_sequences],
-        "Tipo / descripción": system_labels,
-        "Hilo / material": system_yarns
-    })
+    if tipo_seleccion_agujas == "Minijacquard":
+        resumen = pd.DataFrame({
+            "Grupo / sistemas": minijacquard_group_labels,
+            "Filas ligamento": [len(x) for x in minijacquard_group_rows],
+            "Secuencias": [" | ".join("-".join(map(str,row)) for row in rows) for rows in minijacquard_group_rows]
+        })
+    else:
+        resumen = pd.DataFrame({
+            "Sistema": list(range(1,n_sistemas+1)),
+            "Secuencia": ["-".join(map(str,seq)) for seq in system_sequences],
+            "Tipo / descripción": system_labels,
+            "Hilo / material": system_yarns
+        })
 
     st.dataframe(resumen, use_container_width=True, hide_index=True)
 
@@ -1054,7 +1098,7 @@ def generar_zip_png():
     # 1. Ligamento
     lig_buffer = BytesIO()
     fig_lig = (
-        draw_minijacquard_ligament(minijacquard_pattern_sequences, minijacquard_pattern_assignments, visible_slots)
+        draw_minijacquard_ligament(minijacquard_group_labels, minijacquard_group_rows, visible_slots)
         if tipo_seleccion_agujas == "Minijacquard"
         else draw_system_ligaments(
             system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
@@ -1182,7 +1226,7 @@ def generar_excel():
     # Ligamento como imagen
     img_lig = BytesIO()
     fig = (
-        draw_minijacquard_ligament(minijacquard_pattern_sequences, minijacquard_pattern_assignments, visible_slots)
+        draw_minijacquard_ligament(minijacquard_group_labels, minijacquard_group_rows, visible_slots)
         if tipo_seleccion_agujas == "Minijacquard"
         else draw_system_ligaments(
             system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
@@ -1364,7 +1408,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.20: Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
+    "V5.21: Manufactura controla el comportamiento general del generador. Jersey usa monofontura; Rib e Interlock doblefontura; Minijacquard activa ligamento por patrones y selección especial de agujas sin bloques; Otro permite elegir la fontura manualmente. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
