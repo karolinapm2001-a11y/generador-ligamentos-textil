@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.9 · Plato/Dial descendente · Cilindro ascendente")
+st.caption("Versión 5.14 · Bloques verticales · Plato/Dial descendente · Cilindro ascendente")
 
 # =========================================================
 # LIGAMENTO
@@ -763,16 +763,18 @@ def _dibujar_leva_bloque(ax, df, orientation="up"):
 
 
 def leva_dataframe_to_png(df, title, orientation="up"):
+    # Los bloques se apilan verticalmente: S1-S8 arriba, S9-S16 debajo, etc.
     rangos = _rangos_bloques_columnas(df.shape[1])
     n_b = len(rangos)
     rows = df.shape[0]
-    fig_w = max(7.5, sum((b-a)+1 for a,b in rangos) * 1.05 + (n_b-1)*0.8)
-    fig_h = max(3.2, rows * 0.78 + 1.25)
-    fig, axes = plt.subplots(1, n_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
-    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.98)
-    for ax, (a,b) in zip(axes[0], rangos):
-        _dibujar_leva_bloque(ax, df.iloc[:, a:b], orientation)
-    fig.subplots_adjust(left=0.02, right=0.99, bottom=0.04, top=0.88, wspace=0.12)
+    max_cols = max((b-a) for a,b in rangos)
+    fig_w = max(7.5, (max_cols + 1) * 1.10)
+    fig_h = max(3.2, n_b * (rows * 0.78 + 1.05) + 0.8)
+    fig, axes = plt.subplots(n_b, 1, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.995)
+    for r, (a,b) in enumerate(rangos):
+        _dibujar_leva_bloque(axes[r][0], df.iloc[:, a:b], orientation)
+    fig.subplots_adjust(left=0.03, right=0.99, bottom=0.025, top=0.94, hspace=0.28)
     return fig
 
 
@@ -800,62 +802,57 @@ def _dibujar_agujas_bloque(ax, df, font_size=16):
 
 
 def dataframe_to_png(df, title, font_size=16):
+    # Igual que levas: cada bloque va debajo del anterior, nunca al costado.
     rangos = _rangos_bloques_columnas(df.shape[1])
     n_b = len(rangos)
     rows = df.shape[0]
-    fig_w = max(7.5, sum((b-a)+1 for a,b in rangos) * 1.0 + (n_b-1)*0.8)
-    fig_h = max(3.2, rows * 0.72 + 1.20)
-    fig, axes = plt.subplots(1, n_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
-    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.98)
-    for ax, (a,b) in zip(axes[0], rangos):
-        _dibujar_agujas_bloque(ax, df.iloc[:, a:b], font_size=max(font_size,16))
-    fig.subplots_adjust(left=0.02, right=0.99, bottom=0.04, top=0.88, wspace=0.12)
+    max_cols = max((b-a) for a,b in rangos)
+    fig_w = max(7.5, (max_cols + 1) * 1.05)
+    fig_h = max(3.2, n_b * (rows * 0.72 + 1.0) + 0.8)
+    fig, axes = plt.subplots(n_b, 1, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    fig.suptitle(title, fontsize=20, fontweight="bold", color="#17365D", y=0.995)
+    for r, (a,b) in enumerate(rangos):
+        _dibujar_agujas_bloque(axes[r][0], df.iloc[:, a:b], font_size=max(font_size,16))
+    fig.subplots_adjust(left=0.03, right=0.99, bottom=0.025, top=0.94, hspace=0.28)
     return fig
 
 
 def _levas_doble_to_png(tablas):
-    # tablas: [(titulo, df, orientacion), ...]
-    max_b = max(len(_rangos_bloques_columnas(df.shape[1])) for _,df,_ in tablas)
-    rows_total = sum(df.shape[0] for _,df,_ in tablas)
-    max_cols = max(min(10, df.shape[1]) if df.shape[1] <= 10 else 8 for _,df,_ in tablas)
-    fig_w = max(8.5, max_b * (max_cols + 1) * 1.05 + (max_b-1)*0.8)
-    fig_h = max(6.0, rows_total * 0.78 + 2.2)
-    fig, axes = plt.subplots(len(tablas), max_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
-    for r,(titulo,df,orient) in enumerate(tablas):
-        rangos = _rangos_bloques_columnas(df.shape[1])
-        for c in range(max_b):
-            ax=axes[r][c]
-            if c < len(rangos):
-                a,b=rangos[c]
-                _dibujar_leva_bloque(ax, df.iloc[:,a:b], orient)
-                if c == 0:
-                    ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
-            else:
-                ax.axis("off")
-    fig.subplots_adjust(left=0.02,right=0.99,bottom=0.03,top=0.96,wspace=0.12,hspace=0.28)
+    # Plato/Dial y Cilindro, con sus bloques, todos uno debajo del otro.
+    paneles = []
+    for titulo, df, orient in tablas:
+        for bi, (a,b) in enumerate(_rangos_bloques_columnas(df.shape[1])):
+            paneles.append((titulo if bi == 0 else "", df.iloc[:, a:b], orient))
+    max_cols = max(df.shape[1] for _,df,_ in paneles)
+    fig_w = max(8.5, (max_cols + 1) * 1.10)
+    fig_h = max(6.0, sum(df.shape[0] * 0.78 + 1.15 for _,df,_ in paneles))
+    fig, axes = plt.subplots(len(paneles), 1, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    for r,(titulo,df,orient) in enumerate(paneles):
+        ax = axes[r][0]
+        _dibujar_leva_bloque(ax, df, orient)
+        if titulo:
+            ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
+    fig.subplots_adjust(left=0.03,right=0.99,bottom=0.02,top=0.98,hspace=0.32)
     return fig
 
 
 def _agujas_doble_to_png(tablas):
-    max_b = max(len(_rangos_bloques_columnas(df.shape[1])) for _,df in tablas)
-    rows_total = sum(df.shape[0] for _,df in tablas)
-    max_cols = max(min(10, df.shape[1]) if df.shape[1] <= 10 else 8 for _,df in tablas)
-    fig_w = max(8.5, max_b * (max_cols + 1) * 1.0 + (max_b-1)*0.8)
-    fig_h = max(6.0, rows_total * 0.72 + 2.2)
-    fig, axes = plt.subplots(len(tablas), max_b, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
-    for r,(titulo,df) in enumerate(tablas):
-        rangos=_rangos_bloques_columnas(df.shape[1])
-        for c in range(max_b):
-            ax=axes[r][c]
-            if c < len(rangos):
-                a,b=rangos[c]
-                _dibujar_agujas_bloque(ax, df.iloc[:,a:b], font_size=14)
-                if c == 0:
-                    ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
-            else:
-                ax.axis("off")
-    fig.subplots_adjust(left=0.02,right=0.99,bottom=0.03,top=0.96,wspace=0.12,hspace=0.28)
+    paneles = []
+    for titulo, df in tablas:
+        for bi, (a,b) in enumerate(_rangos_bloques_columnas(df.shape[1])):
+            paneles.append((titulo if bi == 0 else "", df.iloc[:, a:b]))
+    max_cols = max(df.shape[1] for _,df in paneles)
+    fig_w = max(8.5, (max_cols + 1) * 1.05)
+    fig_h = max(6.0, sum(df.shape[0] * 0.72 + 1.10 for _,df in paneles))
+    fig, axes = plt.subplots(len(paneles), 1, figsize=(fig_w, fig_h), facecolor="white", squeeze=False)
+    for r,(titulo,df) in enumerate(paneles):
+        ax = axes[r][0]
+        _dibujar_agujas_bloque(ax, df, font_size=16)
+        if titulo:
+            ax.set_title(titulo, fontsize=16, fontweight="bold", color="#17365D", pad=6)
+    fig.subplots_adjust(left=0.03,right=0.99,bottom=0.02,top=0.98,hspace=0.32)
     return fig
+
 
 def _guardar_png_recortado(fig, buffer, dpi=220, margen_px=8, ancho_objetivo=1200):
     """Guarda el gráfico como una captura: recorta todo el blanco exterior y deja un margen mínimo."""
@@ -1192,7 +1189,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.13: letras de ligamento ampliadas para impresión.  selección de agujas con repeticiones independientes del N° de agujas y del ligamento. "
+    "V5.14: levas y agujas exportadas en bloques verticales (1-8, 9-16, etc.; 9-10 permanecen juntas). Letras ampliadas para impresión. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
