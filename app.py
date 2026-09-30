@@ -94,7 +94,7 @@ input, textarea {
 """, unsafe_allow_html=True)
 
 st.title("GENERADOR AUTOMÁTICO DE LIGAMENTOS Y LEVAS – TEJIDO CIRCULAR")
-st.caption("Versión 5.18 · Minijacquard sin bloques en agujas · Ligamento resumido impar/par · Bloques verticales")
+st.caption("Versión 5.19 · Minijacquard configurable por patrones · Agujas sin bloques · Bloques verticales")
 
 # =========================================================
 # LIGAMENTO
@@ -310,41 +310,41 @@ def draw_system_ligaments(system_sequences, visible_slots=12, labels=None, yarns
     fig.tight_layout(pad=0.08)
     return fig
 
-def draw_minijacquard_ligament(system_sequences, visible_slots=6, labels=None, yarns=None):
-    """Representación resumida Minijacquard: patrón 1 = sistemas impares, patrón 2 = sistemas pares."""
-    labels = labels or []
-    yarns = yarns or []
-    n = len(system_sequences)
-    impares = [system_sequences[i] for i in range(0, n, 2)]
-    pares = [system_sequences[i] for i in range(1, n, 2)]
-    seq1 = impares[0] if impares else [1]
-    seq2 = pares[0] if pares else seq1
-
+def draw_minijacquard_ligament(pattern_sequences, pattern_assignments, visible_slots=6):
+    """Dibuja Minijacquard por patrones configurables, independientes del N° real de sistemas."""
+    n_pat = max(1, len(pattern_sequences))
     module_w = 0.90
     symbol_h = 0.68
     slots = max(1, min(int(visible_slots), 12))
     lig_width = slots * module_w
-    fig, ax = plt.subplots(figsize=(10.5, 4.2), facecolor="white")
+    row_gap = 1.35
+    y_top = (n_pat - 1) * row_gap + 1.25
+    footer_h = max(0.85, n_pat * 0.30 + 0.35)
+    fig_h = max(3.4, n_pat * 1.25 + footer_h)
+    fig, ax = plt.subplots(figsize=(10.5, fig_h), facecolor="white")
     ax.set_facecolor("white")
 
-    for num, seq, y in [(1, seq1, 2.55), (2, seq2, 1.15)]:
+    for i, seq in enumerate(pattern_sequences):
+        num = i + 1
+        y = y_top - i * row_gap
+        seq = seq or [1]
         ax.text(-1.10, y, str(num), ha="center", va="center", fontsize=20, fontweight="bold", color="black")
-        # llave visual simple a la izquierda del patrón
         ax.text(-0.35, y, "{", ha="center", va="center", fontsize=56, fontweight="normal", color="black")
         for pos in range(slots):
             sym = seq[pos % len(seq)]
             draw_ligament_symbol(ax, sym, x0=pos*module_w, y0=y, width=module_w, height=symbol_h, lw=2.3)
 
-    # La ficha de referencia asigna los dos patrones a sistemas impares/pares,
-    # sin repetir gráficamente todos los sistemas reales de la máquina.
-    ax.text(-0.10, 0.18, "SISTEMAS IMPARES", ha="left", va="center", fontsize=13, color="black")
-    ax.text(-0.10, -0.10, "SISTEMAS PARES", ha="left", va="center", fontsize=13, color="black")
-    ax.plot([-1.25, lig_width], [-0.30, -0.30], color="black", lw=1.5)
-    ax.text(lig_width+0.75, 0.18, "1", ha="center", va="center", fontsize=13, fontweight="bold")
-    ax.text(lig_width+0.75, -0.10, "2", ha="center", va="center", fontsize=13, fontweight="bold")
+    footer_top = 0.25
+    for i, asignacion in enumerate(pattern_assignments):
+        y = footer_top - i * 0.30
+        texto = str(asignacion).strip() or f"PATRÓN {i+1}"
+        ax.text(-0.10, y, texto.upper(), ha="left", va="center", fontsize=12.5, color="black")
+        ax.text(lig_width+0.75, y, str(i+1), ha="center", va="center", fontsize=13, fontweight="bold")
 
+    line_y = footer_top - max(1, n_pat) * 0.30 - 0.12
+    ax.plot([-1.25, lig_width], [line_y, line_y], color="black", lw=1.5)
     ax.set_xlim(-1.55, lig_width+1.25)
-    ax.set_ylim(-0.48, 3.25)
+    ax.set_ylim(line_y-0.18, y_top+0.70)
     ax.axis("off")
     fig.tight_layout(pad=0.15)
     return fig
@@ -593,6 +593,35 @@ with left:
             help="Ej.: con 48 agujas y agrupación 2 se muestran 1-2, 3-4, ... 47-48."
         )
 
+        st.markdown("**Configuración del ligamento Minijacquard**")
+        n_patrones_mj = st.number_input(
+            "N° de dibujos / patrones de ligamento",
+            min_value=1, max_value=12, value=2, step=1,
+            help="No es el N° de sistemas. Indica cuántos dibujos distintos aparecen en la ficha."
+        )
+        minijacquard_pattern_sequences = []
+        minijacquard_pattern_assignments = []
+        for ptn in range(1, int(n_patrones_mj) + 1):
+            st.markdown(f"**Dibujo {ptn}**")
+            c1, c2 = st.columns([0.8, 1.2])
+            with c1:
+                seq_ptn = st.text_input(
+                    "Secuencia del dibujo",
+                    value="2-1" if ptn == 1 else ("1" if ptn == 2 else "1"),
+                    key=f"mj_pattern_seq_{ptn}",
+                    placeholder="Ej. 2-1-2-1"
+                )
+            with c2:
+                default_asig = "Sistemas impares" if ptn == 1 else ("Sistemas pares" if ptn == 2 else f"Sistemas del dibujo {ptn}")
+                asig_ptn = st.text_input(
+                    "Asignación de sistemas",
+                    value=default_asig,
+                    key=f"mj_pattern_asig_{ptn}",
+                    placeholder="Ej. Sistemas impares / S1-S5-S9-S13"
+                )
+            minijacquard_pattern_sequences.append(parse_sequence(seq_ptn))
+            minijacquard_pattern_assignments.append(asig_ptn)
+
 
     st.markdown('<div class="section-title">2. LIGAMENTO POR SISTEMA</div>', unsafe_allow_html=True)
 
@@ -649,7 +678,7 @@ with right:
     st.markdown('<div class="section-title">4. LIGAMENTO GENERADO</div>', unsafe_allow_html=True)
 
     fig_lig_preview = (
-        draw_minijacquard_ligament(system_sequences, visible_slots, system_labels, system_yarns)
+        draw_minijacquard_ligament(minijacquard_pattern_sequences, minijacquard_pattern_assignments, visible_slots)
         if tipo_seleccion_agujas == "Minijacquard"
         else draw_system_ligaments(
             system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
@@ -968,7 +997,7 @@ def generar_zip_png():
     # 1. Ligamento
     lig_buffer = BytesIO()
     fig_lig = (
-        draw_minijacquard_ligament(system_sequences, visible_slots, system_labels, system_yarns)
+        draw_minijacquard_ligament(minijacquard_pattern_sequences, minijacquard_pattern_assignments, visible_slots)
         if tipo_seleccion_agujas == "Minijacquard"
         else draw_system_ligaments(
             system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
@@ -1091,7 +1120,7 @@ def generar_excel():
     # Ligamento como imagen
     img_lig = BytesIO()
     fig = (
-        draw_minijacquard_ligament(system_sequences, visible_slots, system_labels, system_yarns)
+        draw_minijacquard_ligament(minijacquard_pattern_sequences, minijacquard_pattern_assignments, visible_slots)
         if tipo_seleccion_agujas == "Minijacquard"
         else draw_system_ligaments(
             system_sequences, visible_slots, labels=system_labels, yarns=system_yarns,
@@ -1271,7 +1300,7 @@ st.download_button(
 )
 
 st.info(
-    "V5.18: Minijacquard exporta agujas en una sola tabla continua (sin bloques) y el ligamento se resume en patrón 1 para sistemas impares y patrón 2 para sistemas pares. En selección Normal se mantienen los bloques verticales. "
+    "V5.19: Minijacquard permite definir de 1 a 12 dibujos/patrones de ligamento y asignar libremente los sistemas de cada dibujo. Agujas Minijacquard se exportan en una sola tabla continua, sin bloques. En selección Normal se mantienen los bloques verticales. "
     "Se mantienen Plato/Dial descendente y hacia abajo, Cilindro ascendente y hacia arriba, "
     "tablas separadas y exportación Excel con trapecios gráficos."
 )
