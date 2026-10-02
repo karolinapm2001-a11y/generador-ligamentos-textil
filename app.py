@@ -890,10 +890,16 @@ with right:
             ("LEVAS – CILINDRO", df_leva_cil_symbols)
         ]
 
-        needle_exports = [
-            ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
-            (f"PROGRAMACIÓN MINIJACQUARD – PLATO {'IMPAR' if plato_impar_mj else 'PAR'} / CILINDRO {'PAR' if plato_impar_mj else 'IMPAR'}", df_needle_cil_symbols)
-        ]
+        if tipo_seleccion_agujas == "Minijacquard":
+            needle_exports = [
+                ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
+                (f"PROGRAMACIÓN MINIJACQUARD – PLATO {'IMPAR' if plato_impar_mj else 'PAR'} / CILINDRO {'PAR' if plato_impar_mj else 'IMPAR'}", df_needle_cil_symbols)
+            ]
+        else:
+            needle_exports = [
+                ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
+                ("AGUJAS / CILINDRO", df_needle_cil_symbols)
+            ]
 
     # =====================================================
     # RESUMEN
@@ -1146,10 +1152,16 @@ def generar_zip_png():
     aguja_buffer = BytesIO()
 
     if tipo_fontura == "Doblefontura":
-        tablas_ag = [
-            ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
-            (f"PROGRAMACIÓN MINIJACQUARD – PLATO {'IMPAR' if plato_impar_mj else 'PAR'} / CILINDRO {'PAR' if plato_impar_mj else 'IMPAR'}", df_needle_cil_symbols),
-        ]
+        if tipo_seleccion_agujas == "Minijacquard":
+            tablas_ag = [
+                ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
+                (f"PROGRAMACIÓN MINIJACQUARD – PLATO {'IMPAR' if plato_impar_mj else 'PAR'} / CILINDRO {'PAR' if plato_impar_mj else 'IMPAR'}", df_needle_cil_symbols),
+            ]
+        else:
+            tablas_ag = [
+                ("AGUJAS / DIAL (PLATO)", df_needle_plato_symbols),
+                ("AGUJAS / CILINDRO", df_needle_cil_symbols),
+            ]
         fig_ag = (
             _agujas_doble_minijac_to_png(tablas_ag)
             if tipo_seleccion_agujas == "Minijacquard"
