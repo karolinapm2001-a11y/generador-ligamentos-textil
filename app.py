@@ -370,8 +370,8 @@ def ensure_needle_state(n_agujas, visible_slots, fontura_name="Mono"):
     return key
 
 def _orden_visual_agujas(n_agujas, fontura_name):
-    """Orden visual ascendente normal para todas las fonturas: 1→N."""
-    numeros = range(1, n_agujas + 1)
+    """Plato/Dial se muestra N→1; Cilindro y Monofontura se mantienen 1→N."""
+    numeros = range(int(n_agujas), 0, -1) if fontura_name == "Plato" else range(1, int(n_agujas) + 1)
     return [f"Aguja {a}" for a in numeros]
 
 
@@ -396,10 +396,12 @@ def make_leva_editor_custom(title, n_agujas, system_ids, fontura_name):
     key = f"leva_custom_{fontura_name}_{int(n_agujas)}_" + "_".join(map(str, ids))
     if key not in st.session_state:
         st.session_state[key] = pd.DataFrame("Anulado", index=[f"Aguja {a}" for a in range(1,int(n_agujas)+1)], columns=cols)
-    df_estado = st.session_state[key]
+    orden_filas = _orden_visual_agujas(int(n_agujas), fontura_name)
+    df_estado = st.session_state[key].reindex(orden_filas)
     cfg = {c: st.column_config.SelectboxColumn(c.replace("Sistema ", "S"), options=["Malla","Retención","Anulado","Vacío"], required=True) for c in cols}
     df_edit = st.data_editor(df_estado, column_config=cfg, use_container_width=True, num_rows="fixed", key=f"editor_{key}")
-    st.session_state[key] = df_edit.copy()
+    base_index = st.session_state[key].index
+    st.session_state[key] = df_edit.reindex(base_index).copy()
     if fontura_name == "Plato":
         mp={"Malla":"▼","Retención":"TRAP","Anulado":"—","Vacío":""}
         st.caption("▼ = Malla   TRAP = Retención   — = Anulado / Sin tejido")
