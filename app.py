@@ -429,19 +429,10 @@ def make_leva_editor(title, n_agujas, n_sistemas, fontura_name):
         for s in range(1,n_sistemas+1)
     }
 
-    # Editor con clave estable por fontura. Mantener una key que cambia con las
-    # dimensiones puede hacer que React intente desmontar un componente que ya
-    # fue reemplazado durante el rerun (removeChild / NotFoundError).
-    editor_key = f"leva_editor_{fontura_name}"
-
-    # Si cambió la forma de la matriz, limpiamos únicamente el estado interno
-    # del widget antes de volver a dibujarlo. La matriz real sigue guardada en
-    # leva_key y conserva la lógica Aguja × Sistema.
-    shape_key = f"{editor_key}_shape"
-    current_shape = (int(n_agujas), int(n_sistemas))
-    if st.session_state.get(shape_key) != current_shape:
-        st.session_state.pop(editor_key, None)
-        st.session_state[shape_key] = current_shape
+    # La key incluye las dimensiones. No eliminamos manualmente el estado del
+    # widget durante el mismo rerun: hacerlo puede desincronizar el DOM de
+    # Streamlit/React y provocar NotFoundError (removeChild).
+    editor_key = f"leva_editor_{fontura_name}_{int(n_agujas)}_{int(n_sistemas)}"
 
     df_edit = st.data_editor(
         df_estado,
@@ -500,13 +491,9 @@ def make_needle_editor(title, n_agujas, visible_slots, fontura_name):
         for p in range(1,visible_slots+1)
     }
 
-    # Misma estrategia de estabilidad que en el editor de levas.
-    editor_key = f"needle_editor_{fontura_name}"
-    shape_key = f"{editor_key}_shape"
-    current_shape = (int(n_agujas), int(visible_slots))
-    if st.session_state.get(shape_key) != current_shape:
-        st.session_state.pop(editor_key, None)
-        st.session_state[shape_key] = current_shape
+    # Igual que en levas: key propia por dimensiones y sin borrar el estado
+    # interno del widget durante el rerun.
+    editor_key = f"needle_editor_{fontura_name}_{int(n_agujas)}_{int(visible_slots)}"
 
     df_edit = st.data_editor(
         df_estado,
