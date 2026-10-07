@@ -187,13 +187,13 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
         )
 
     elif sym == 7:
-        # Línea horizontal con punto debajo, según la referencia del catálogo.
+        # línea horizontal con punto encima
         ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
         ax.plot(
             xm,
-            y0-height*0.34,
+            y0+height*0.34,
             marker="o",
-            markersize=2.2,
+            markersize=4.2,
             color="black"
         )
 
