@@ -108,7 +108,7 @@ def parse_sequence(txt):
             continue
         try:
             v = int(p)
-            if 1 <= v <= 9:
+            if 1 <= v <= 16:
                 vals.append(v)
         except:
             pass
@@ -209,28 +209,69 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
         ax.text(xm, y0 - height*0.34, "x", ha="center", va="center",
                 fontsize=11, fontweight="bold", color="black")
 
+    elif sym == 10:
+        # círculo encima de línea + punto debajo
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.add_patch(Circle((xm, y0+r), r, fill=False, color="black", lw=lw))
+        ax.plot(xm, y0-height*0.55, marker="o", markersize=4.2, color="black")
+
+    elif sym == 11:
+        # punto encima + línea con círculo debajo
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.add_patch(Circle((xm, y0-r), r, fill=False, color="black", lw=lw))
+        ax.plot(xm, y0+height*0.55, marker="o", markersize=4.2, color="black")
+
+    elif sym == 12:
+        # punto encima + línea + punto debajo
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.plot(xm, y0+height*0.48, marker="o", markersize=4.2, color="black")
+        ax.plot(xm, y0-height*0.48, marker="o", markersize=4.2, color="black")
+
+    elif sym == 13:
+        # punto encima + V hacia abajo + punto debajo
+        ax.plot([x0, xm, x1], [y0, y0-height*0.58, y0], color="black", lw=lw)
+        ax.plot(xm, y0+height*0.52, marker="o", markersize=4.2, color="black")
+        ax.plot(xm, y0-height*1.05, marker="o", markersize=4.2, color="black")
+
+    elif sym == 14:
+        # ∧ hacia arriba + punto debajo
+        ax.plot([x0, xm, x1], [y0, y0+height*0.58, y0], color="black", lw=lw)
+        ax.plot(xm, y0-height*0.55, marker="o", markersize=4.2, color="black")
+
+    elif sym == 15:
+        # punto encima + línea + X debajo
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.plot(xm, y0+height*0.48, marker="o", markersize=4.2, color="black")
+        ax.text(xm, y0-height*0.43, "x", ha="center", va="center",
+                fontsize=11, fontweight="bold", color="black")
+
+    elif sym == 16:
+        # X encima + línea + punto debajo
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.text(xm, y0+height*0.43, "x", ha="center", va="center",
+                fontsize=11, fontweight="bold", color="black")
+        ax.plot(xm, y0-height*0.48, marker="o", markersize=4.2, color="black")
+
 def draw_catalog():
-    fig, ax = plt.subplots(figsize=(5.2, 6.4), facecolor="white")
+    # Catálogo 1–16 en dos columnas, siguiendo la referencia visual.
+    fig, ax = plt.subplots(figsize=(7.4, 6.7), facecolor="white")
     ax.set_facecolor("white")
 
-    for i, sym in enumerate([1,2,3,4,5,6,7,8,9]):
-        y = 8-i
-        ax.text(
-            0.15, y, str(sym),
-            fontsize=13, fontweight="bold",
-            va="center", color="black"
-        )
-        draw_ligament_symbol(
-            ax, sym,
-            x0=0.95,
-            y0=y,
-            width=1.05,
-            height=0.75,
-            lw=2.2
-        )
+    left_syms = list(range(1, 11))
+    right_syms = list(range(11, 17))
 
-    ax.set_xlim(0,2.35)
-    ax.set_ylim(-0.6,8.8)
+    for i, sym in enumerate(left_syms):
+        y = 9 - i
+        ax.text(0.15, y, str(sym), fontsize=13, fontweight="bold", va="center", color="black")
+        draw_ligament_symbol(ax, sym, x0=0.75, y0=y, width=1.05, height=0.68, lw=2.2)
+
+    for i, sym in enumerate(right_syms):
+        y = 9 - i
+        ax.text(3.25, y, str(sym), fontsize=13, fontweight="bold", va="center", color="black")
+        draw_ligament_symbol(ax, sym, x0=3.85, y0=y, width=1.05, height=0.68, lw=2.2)
+
+    ax.set_xlim(0, 5.35)
+    ax.set_ylim(-0.9, 10.0)
     ax.axis("off")
     fig.tight_layout()
     return fig
