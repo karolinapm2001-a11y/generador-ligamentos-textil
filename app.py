@@ -108,7 +108,7 @@ def parse_sequence(txt):
             continue
         try:
             v = int(p)
-            if 1 <= v <= 7:
+            if 1 <= v <= 9:
                 vals.append(v)
         except:
             pass
@@ -197,12 +197,24 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
             color="black"
         )
 
+    elif sym == 8:
+        # línea horizontal con X encima
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.text(xm, y0 + height*0.34, "x", ha="center", va="center",
+                fontsize=11, fontweight="bold", color="black")
+
+    elif sym == 9:
+        # línea horizontal con X debajo
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.text(xm, y0 - height*0.34, "x", ha="center", va="center",
+                fontsize=11, fontweight="bold", color="black")
+
 def draw_catalog():
-    fig, ax = plt.subplots(figsize=(5.2, 5.1), facecolor="white")
+    fig, ax = plt.subplots(figsize=(5.2, 6.4), facecolor="white")
     ax.set_facecolor("white")
 
-    for i, sym in enumerate([1,2,3,4,5,6,7]):
-        y = 6-i
+    for i, sym in enumerate([1,2,3,4,5,6,7,8,9]):
+        y = 8-i
         ax.text(
             0.15, y, str(sym),
             fontsize=13, fontweight="bold",
@@ -218,7 +230,7 @@ def draw_catalog():
         )
 
     ax.set_xlim(0,2.35)
-    ax.set_ylim(-0.6,6.8)
+    ax.set_ylim(-0.6,8.8)
     ax.axis("off")
     fig.tight_layout()
     return fig
