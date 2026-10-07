@@ -187,13 +187,14 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
         )
 
     elif sym == 7:
-        # Línea horizontal con flecha hacia la derecha.
-        # Se mantiene dentro de un módulo para que pueda repetirse en el ligamento.
-        ax.annotate(
-            "",
-            xy=(x1, y0),
-            xytext=(x0, y0),
-            arrowprops=dict(arrowstyle="->", color="black", lw=lw, shrinkA=0, shrinkB=0)
+        # Línea horizontal con punto debajo, según la referencia del catálogo.
+        ax.plot([x0, x1], [y0, y0], color="black", lw=lw)
+        ax.plot(
+            xm,
+            y0-height*0.34,
+            marker="o",
+            markersize=2.2,
+            color="black"
         )
 
 def draw_catalog():
