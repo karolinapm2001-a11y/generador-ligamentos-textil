@@ -228,10 +228,9 @@ def draw_ligament_symbol(ax, sym, x0, y0, width=1.0, height=0.55, lw=2.0):
         ax.plot(xm, y0-height*0.48, marker="o", markersize=4.2, color="black")
 
     elif sym == 13:
-        # punto encima + V hacia abajo + punto debajo
+        # punto encima + V hacia abajo (sin punto inferior)
         ax.plot([x0, xm, x1], [y0, y0-height*0.58, y0], color="black", lw=lw)
         ax.plot(xm, y0+height*0.52, marker="o", markersize=4.2, color="black")
-        ax.plot(xm, y0-height*1.05, marker="o", markersize=4.2, color="black")
 
     elif sym == 14:
         # ∧ hacia arriba + punto debajo
